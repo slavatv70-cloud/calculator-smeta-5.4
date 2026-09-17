@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор Сметчика</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#1e1e1e;--bg2:#252526;--bg3:#2d2d30;--border:#3c3c3c;--text:#e0e0e0;--muted:#8b949e;--accent:#007acc;--accent-h:#0098ff;--green:#4ec9b0;--green-bg:#1e3a2e;--red:#da3633;--orange:#fb923c;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;font-size:14px;min-height:100vh;}
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:15px 25px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+h1{color:#569cd6;font-size:22px;}
+h1 span{color:var(--green);}
+.material-picker{display:flex;align-items:center;gap:8px;}
+.material-picker label{color:var(--muted);font-size:13px;}
+select,input[type="text"],input[type="number"]{background:var(--bg3);border:1px solid #555;border-radius:4px;padding:6px 10px;color:#fff;font-size:13px;min-height:32px;font-family:inherit;outline:none;width:100%;}
+select:focus,input:focus{border-color:var(--accent);}
+nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 15px;overflow-x:auto;white-space:nowrap;position:sticky;top:0;z-index:100;}
+nav button{background:transparent;color:#ccc;border:none;padding:12px 16px;font-size:13px;cursor:pointer;border-bottom:3px solid transparent;font-family:inherit;transition:all .15s;}
+nav button:hover{color:#fff;background:rgba(255,255,255,.05);}
+nav button.active{color:#fff;border-bottom-color:var(--accent);background:var(--bg3);}
+main{padding:20px;max-width:1400px;margin:0 auto;}
+.tab{display:none;}
+.tab.active{display:block;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:15px 18px;margin-bottom:15px;}
+.card h2{color:var(--green);font-size:13px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px;}
+.row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.row label{flex:0 0 200px;font-size:13px;color:#ccc;}
+.row input,.row select{flex:1;}
+.row .unit{flex:0 0 55px;color:#9cdcfe;font-size:12px;text-align:right;}
+button.btn{background:var(--accent);color:#fff;border:none;border-radius:4px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;}
+button.btn:hover{background:var(--accent-h);}
+button.btn.sec{background:#3c3c3c;}
+button.btn.sec:hover{background:#555;}
+button.btn.danger{background:var(--red);}
+button.btn.danger:hover{background:#f85149;}
+.btn-group{display:flex;gap:10px;justify-content:center;margin:15px 0;flex-wrap:wrap;}
+.result{background:var(--green-bg);border:1px solid var(--green);border-radius:6px;padding:12px 15px;color:var(--green);font-size:15px;font-weight:600;margin-top:10px;cursor:pointer;user-select:text;}
+.result:hover{background:#245041;}
+.result.copied{background:#2ea043;color:#fff;border-color:#2ea043;}
+.history{list-style:none;max-height:400px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px;}
+.history li{padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;color:#ccc;white-space:pre-wrap;line-height:1.5;}
+.history li:last-child{border-bottom:none;}
+.history li:empty{display:none;}
+.two-col{display:grid;grid-template-columns:2fr 1fr;gap:15px;}
+@media(max-width:900px){.two-col{grid-template-columns:1fr;}.row{flex-direction:column;align-items:stretch;}.row label{flex:none;margin-bottom:4px;}.row .unit{text-align:left;}}
+.info{background:var(--bg3);border-left:3px solid var(--accent);padding:10px 14px;border-radius:4px;font-size:12px;color:var(--muted);margin-bottom:15px;line-height:1.5;}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:400px;margin:0 auto;}
+.calc-grid button{padding:18px 0;font-size:16px;font-weight:600;background:var(--bg3);color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;font-family:inherit;}
+.calc-grid button:hover{background:#555;}
+.calc-grid button.op{color:var(--green);}
+.calc-grid button.eq{background:var(--accent);}
+.calc-grid button.clear{background:var(--red);}
+.calc-display{background:#1a1a1a;border:2px solid var(--border);border-radius:6px;padding:15px;font-size:24px;text-align:right;color:#fff;margin-bottom:12px;min-height:60px;word-break:break-all;}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:20px;border-top:1px solid var(--border);margin-top:30px;}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--green);color:#1e1e1e;padding:12px 25px;border-radius:6px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:1000;}
+.toast.show{opacity:1;}
+table.fastener{width:100%;border-collapse:collapse;font-size:11px;}
+table.fastener th{background:var(--bg3);color:#ccc;padding:6px;border:1px solid var(--border);text-align:left;position:sticky;top:0;}
+table.fastener td{padding:3px;border:1px solid var(--border);}
+table.fastener select,table.fastener input{min-height:26px;padding:3px 5px;font-size:11px;width:100%;}
+svg.weld-scheme{width:100%;max-width:320px;height:120px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔧 Калькулятор <span>Сметчика</span></h1>
+  <div class="material-picker">
+    <label>Материал:</label>
+    <select id="globalMaterial" style="width:auto;min-width:200px"></select>
+  </div>
+</header>
+
+<nav id="tabsNav"></nav>
+
+<main>
+
+<!-- МЕТАЛЛОПРОКАТ -->
+<section class="tab active" data-tab="rolled">
+  <div class="two-col">
+    <div>
+      <div class="info">Расчёт массы металлопроката. Плотность берётся из выбранного материала.</div>
+      <div class="card"><h2>Тип изделия</h2><select id="rolledType"></select></div>
+      <div class="card"><h2>Параметры</h2><div id="rolledInputs"></div></div>
+      <div class="btn-group">
+        <button class="btn" onclick="calcRolled()">🧮 Рассчитать</button>
+        <button class="btn sec" onclick="clearRolled()">Очистить</button>
+      </div>
+      <div id="rolledResult" class="result" style="display:none"></div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="rolledHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('rolled')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- СОРТАМЕНТ -->
+<section class="tab" data-tab="sortament">
+  <div class="two-col">
+    <div>
+      <div class="info">Встроенный сортамент ГОСТ. Выбираете размер — масса 1 м подставляется автоматически.</div>
+      <div class="card">
+        <h2>Сортамент</h2>
+        <div class="row"><label>Тип проката:</label><select id="sortType"></select></div>
+        <div id="sortSizeInputs"></div>
+        <div class="row" style="margin-top:12px"><label>Длина, м:</label><input type="text" id="sortLength" value="6"><span class="unit">м</span></div>
+      </div>
+      <div class="card"><h2>Справочно</h2>
+        <div id="sortMassPerM" class="result" style="display:block">—</div>
+        <div id="sortParams" style="margin-top:8px;font-size:12px;color:var(--muted)">—</div>
+      </div>
+      <div class="btn-group"><button class="btn" onclick="calcSortament()">🧮 Рассчитать</button></div>
+      <div id="sortResult" class="result" style="display:none"></div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="sortamentHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('sortament')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- ПРОФИЛИ -->
+<section class="tab" data-tab="profiles">
+  <div class="two-col">
+    <div>
+      <div class="info">Профили ГКЛ, защитные уголки, перфолента. Массы 1 м — справочные (Кнауф/Gyproc).</div>
+      <div class="card"><h2>Тип профиля</h2><select id="profileType"></select></div>
+      <div class="card"><h2>Типоразмер</h2>
+        <div class="row"><label>Размер:</label><select id="profileSize"></select></div>
+        <div id="profileInfo" style="margin-top:10px;font-size:12px;color:var(--muted)">—</div>
+      </div>
+      <div class="card"><h2>Расчёт</h2>
+        <div class="row"><label>Длина одной штуки, м:</label><input type="text" id="profileLength" value="3"><span class="unit">м</span></div>
+        <div class="row"><label>Количество, шт:</label><input type="text" id="profileQty" value="1"><span class="unit">шт</span></div>
+      </div>
+      <div class="btn-group"><button class="btn" onclick="calcProfiles()">🧮 Рассчитать</button></div>
+      <div id="profileResult" class="result" style="display:none"></div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="profilesHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('profiles')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- ПОКРАСКА -->
+<section class="tab" data-tab="painting">
+  <div class="two-col">
+    <div>
+      <div class="info">Площадь окраски + расход краски с учётом слоёв и потерь.</div>
+      <div class="card"><h2>Изделие</h2><select id="paintType"></select><div id="paintInputs" style="margin-top:12px"></div></div>
+      <div class="card"><h2>Параметры покраски</h2>
+        <div class="row"><label>Количество слоёв:</label><input type="text" id="paintLayers" value="2"><span class="unit">шт</span></div>
+        <div class="row"><label>Расход на 1 слой:</label><input type="text" id="paintCons" value="0.15"><span class="unit">кг/м²</span></div>
+        <div class="row"><label>Запас на потери:</label><input type="text" id="paintLoss" value="5"><span class="unit">%</span></div>
+      </div>
+      <div class="btn-group"><button class="btn" onclick="calcPainting()">🧮 Рассчитать</button></div>
+      <div class="results-list">
+        <div id="paintArea" class="result" style="display:none"></div>
+        <div id="paintPerLayer" class="result" style="display:none"></div>
+        <div id="paintTotal" class="result" style="display:none"></div>
+      </div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="paintingHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('painting')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- ПЕСКОСТРУЙ -->
+<section class="tab" data-tab="sandblast">
+  <div class="two-col">
+    <div>
+      <div class="info">Расход абразива и трудоёмкость по ISO 8501-1 (Sa 1 … Sa 3).</div>
+      <div class="card"><h2>Параметры</h2>
+        <div class="row"><label>Степень очистки:</label><select id="sbDegree"></select></div>
+        <div class="row"><label>Тип абразива:</label><select id="sbAbrasive"></select></div>
+        <div class="row"><label>Площадь, м²:</label><input type="text" id="sbArea" value="100"><span class="unit">м²</span></div>
+        <div class="row"><label>Кол-во проходов:</label><input type="text" id="sbPasses" value="1"><span class="unit">шт</span></div>
+        <div id="sbInfo" style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5">—</div>
+      </div>
+      <div class="btn-group"><button class="btn" onclick="calcSandblast()">🧮 Рассчитать</button></div>
+      <div class="results-list">
+        <div id="sbAbrPerM2" class="result" style="display:none"></div>
+        <div id="sbAbrTotal" class="result" style="display:none"></div>
+        <div id="sbTimePerM2" class="result" style="display:none"></div>
+        <div id="sbTimeTotal" class="result" style="display:none"></div>
+      </div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="sandblastHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('sandblast')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- НОРМЫ АКЗ -->
+<section class="tab" data-tab="akzlib">
+  <div class="two-col">
+    <div>
+      <div class="info">Библиотека норм расхода лакокрасочных материалов.</div>
+      <div class="card"><h2>Материал</h2>
+        <div class="row"><label>ЛКМ:</label><select id="akzMat"></select></div>
+        <div id="akzMatInfo" style="font-size:12px;color:var(--muted);margin-top:8px">—</div>
+        <div class="row" style="margin-top:12px"><label>Площадь, м²:</label><input type="text" id="akzArea" value="100"><span class="unit">м²</span></div>
+        <div class="row"><label>Слоёв (опц.):</label><input type="text" id="akzLayers" placeholder="по умолчанию"><span class="unit">шт</span></div>
+      </div>
+      <div class="btn-group"><button class="btn" onclick="calcAkzLib()">🧮 Рассчитать</button></div>
+      <div id="akzResult" class="result" style="display:none"></div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="akzlibHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('akzlib')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- КРЕПЁЖ -->
+<section class="tab" data-tab="fastener">
+  <div class="two-col">
+    <div>
+      <div class="info">Расчёт массы метизов. Материал — сталь (влияние глобального материала отключено). Покрытие «Оцинкованный» даёт +2 % к массе.</div>
+      <div class="card"><h2>Строки расчёта</h2>
+        <table class="fastener" id="fastenerTable">
+          <thead><tr>
+            <th>№</th><th>Тип</th><th>Стандарт</th><th>Размер 1</th><th>Размер 2</th><th>Размер 3</th>
+            <th>Покрытие</th><th>Класс</th><th>Кол-во</th><th>Вес 1 шт</th><th>Вес</th><th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="btn-group" style="justify-content:flex-start;margin-top:12px">
+          <button class="btn" onclick="fastenerAddRow()">➕ Добавить строку</button>
+          <button class="btn sec" onclick="calcFastener()">🧮 Рассчитать</button>
+          <button class="btn danger" onclick="fastenerClearAll()">Очистить всё</button>
+        </div>
+      </div>
+      <div id="fastenerResult" class="result" style="display:none"></div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="fastenerHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('fastener')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- ИЗОЛЯЦИЯ -->
+<section class="tab" data-tab="insulation">
+  <div class="two-col">
+    <div>
+      <div class="info">Объём тепловой изоляции и площадь покровного слоя.</div>
+      <div class="card"><h2>Тип расчёта</h2>
+        <select id="insType">
+          <option value="single">Одна труба</option>
+          <option value="v1">Пучок (3 трубы, вариант 1)</option>
+          <option value="v2">Пучок (2+ труб, вариант 2)</option>
+        </select>
+        <div id="insInputs" style="margin-top:12px"></div>
+      </div>
+      <div class="btn-group"><button class="btn" onclick="calcInsulation()">🧮 Рассчитать</button></div>
+      <div class="results-list">
+        <div id="insSr" class="result" style="display:none"></div>
+        <div id="insSpi" class="result" style="display:none"></div>
+        <div id="insVi" class="result" style="display:none"></div>
+      </div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="insulationHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('insulation')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- РАСЧЁТ АКЗ ИЗ EXCEL -->
+<section class="tab" data-tab="anticorr">
+  <div class="two-col">
+    <div>
+      <div class="info">Загрузка файла Excel с нормами АКЗ. Формат: столбцы A=№ведомости, B=назначение, C=материал, D=марка, H=норма на 1 слой, I=слоёв, K=итог.</div>
+      <div class="card">
+        <h2>Загрузка файла</h2>
+        <input type="file" id="excelFile" accept=".xlsx,.xls" style="color:#ccc">
+        <div id="excelInfo" style="margin-top:10px;font-size:12px;color:var(--muted)">Файл не загружен</div>
+      </div>
+      <div class="card"><h2>Параметры</h2>
+        <div class="row"><label>Раздел:</label><select id="akzSection"></select></div>
+        <div class="row"><label>Ведомость:</label><select id="akzVest"></select></div>
+        <div class="row"><label>Площадь, м²:</label><input type="text" id="akzExcelArea" value="100"><span class="unit">м²</span></div>
+        <div class="row"><label>Слоёв (опц.):</label>
+          <select id="akzExcelLayers"><option>По умолчанию</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+        </div>
+      </div>
+      <div class="btn-group"><button class="btn" onclick="calcAnticorr()">🧮 Рассчитать</button></div>
+      <div id="anticorrResult" class="result" style="display:none"></div>
+      <div id="anticorrDetails" style="margin-top:10px;font-size:12px;color:#ccc;line-height:1.6"></div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="anticorrHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('anticorr')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- СВАРКА -->
+<section class="tab" data-tab="welding">
+  <div class="two-col">
+    <div>
+      <div class="info">Расчёт расхода сварочных материалов по ГОСТ 16037-80 / 5264-80.</div>
+      <div class="card"><h2>Параметры сварки</h2>
+        <div class="row"><label>Тип конструкции:</label><select id="weldCat">
+          <option value="pipe">Трубы (ГОСТ 16037-80)</option>
+          <option value="sheet">Листы (ГОСТ 5264-80)</option>
+          <option value="bar">Прутки (ГОСТ 5264-80)</option>
+        </select></div>
+        <div class="row"><label>Соединение:</label><select id="weldJoint"></select></div>
+        <div class="row"><label>Способ сварки:</label><select id="weldMethod">
+          <option value="0">Ручная дуговая (РДС)</option>
+          <option value="1">Полуавтомат (MIG/MAG в CO₂)</option>
+          <option value="2">Аргонодуговая (TIG)</option>
+          <option value="3">Газовая сварка</option>
+        </select></div>
+        <div class="row"><label>Положение шва:</label><select id="weldPos">
+          <option value="0">Нижнее</option><option value="1">Горизонтальное</option>
+          <option value="2">Вертикальное</option><option value="3">Потолочное</option><option value="4">Наклонное</option>
+        </select></div>
+        <div class="row"><label>Квалификация:</label><select id="weldQual">
+          <option value="0">Высокая (минимальный угар)</option>
+          <option value="1">Средняя (+8 % к потерям)</option>
+        </select></div>
+        <div id="weldInputs" style="margin-top:12px"></div>
+      </div>
+      <div class="card"><h2>Схема разделки кромок</h2>
+        <div id="weldScheme" style="display:flex;justify-content:center"></div>
+      </div>
+      <div class="btn-group"><button class="btn" onclick="calcWelding()">🧮 Рассчитать</button></div>
+      <div class="results-list">
+        <div id="weldLen" class="result" style="display:none"></div>
+        <div id="weldF" class="result" style="display:none"></div>
+        <div id="weldPure" class="result" style="display:none"></div>
+        <div id="weldTotal" class="result" style="display:none"></div>
+        <div id="weldGas" class="result" style="display:none"></div>
+      </div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="weldingHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('welding')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- КАЛЬКУЛЯТОР -->
+<section class="tab" data-tab="calc">
+  <div class="two-col">
+    <div>
+      <div class="card">
+        <div class="calc-display" id="calcDisplay">0</div>
+        <div class="calc-grid">
+          <button class="clear" onclick="calcInput('C')">C</button>
+          <button class="clear" onclick="calcInput('CE')">CE</button>
+          <button onclick="calcInput('⌫')">⌫</button>
+          <button class="op" onclick="calcInput('/')">÷</button>
+          <button onclick="calcInput('7')">7</button><button onclick="calcInput('8')">8</button>
+          <button onclick="calcInput('9')">9</button><button class="op" onclick="calcInput('*')">×</button>
+          <button onclick="calcInput('4')">4</button><button onclick="calcInput('5')">5</button>
+          <button onclick="calcInput('6')">6</button><button class="op" onclick="calcInput('-')">−</button>
+          <button onclick="calcInput('1')">1</button><button onclick="calcInput('2')">2</button>
+          <button onclick="calcInput('3')">3</button><button class="op" onclick="calcInput('+')">+</button>
+          <button onclick="calcInput('0')">0</button><button onclick="calcInput('.')">.</button>
+          <button class="eq" onclick="calcInput('=')">=</button><button class="op" onclick="calcInput('(')">(</button>
+        </div>
+      </div>
+    </div>
+    <div class="card"><h2>История</h2><ul class="history" id="calcHistory"></ul>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearHistory('calc')">Очистить</button></div>
+  </div>
+</section>
+
+<!-- СПРАВКА -->
+<section class="tab" data-tab="help">
+  <div class="card">
+    <h2>📘 Справка</h2>
+    <div style="line-height:1.7;font-size:13px">
+      <p><strong>Калькулятор Сметчика v5.4 (web)</strong> — инженерные расчёты для сметного отдела.</p>
+      <p style="margin-top:12px"><strong>Разделы:</strong></p>
+      <ul style="margin-left:20px;margin-top:6px">
+        <li>Металлопрокат — масса по геометрии</li>
+        <li>Сортамент ГОСТ — массы 1 м из справочника</li>
+        <li>Профили ГКЛ — каталог профилей и перфолента</li>
+        <li>Покраска — площадь + расход краски</li>
+        <li>Пескоструй — расход абразива по ISO 8501-1</li>
+        <li>Нормы АКЗ — библиотека ЛКМ</li>
+        <li>Крепёж — болты, гайки, саморезы и т.д.</li>
+        <li>Изоляция — объём изоляции труб</li>
+        <li>Расчёт АКЗ — загрузка норм из Excel</li>
+        <li>Сварка — расход электродов/газа</li>
+        <li>Калькулятор — обычный + история</li>
+      </ul>
+      <p style="margin-top:12px"><strong>Особенности:</strong> приём точки и запятой, копирование результатов по клику, история в localStorage, работа offline.</p>
+      <p style="margin-top:12px;color:var(--muted);font-size:12px">Разработчик: Тищенко В.В. | Сметный отдел ООО «СГК»</p>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer>Калькулятор Сметчика v5.4 (web) · Разработал Тищенко В.В. · ООО «СГК»</footer>
+<div class="toast" id="toast">✅ Скопировано</div>
+
+<script>
+// ============================== ДАННЫЕ ==============================
+
+const MATERIALS = {
+  "Сталь (углеродистая)":7850,"Нержавеющая сталь":7930,"Алюминий":2700,
+  "Медь":8900,"Бронза":8800,"Чугун":7200,"Латунь":8500
+};
+let currentDensity = 7850;
+
+const SORTAMENT = {
+  "Труба ГОСТ 8732-78 (горячедеформ.)":{type:"pipe",data:[
+    [20,2.5,1.08],[20,3.0,1.26],[20,3.5,1.42],[25,2.5,1.39],[25,3.0,1.63],[25,3.5,1.86],[25,4.0,2.07],
+    [32,3.0,2.15],[32,3.5,2.46],[32,4.0,2.76],[38,3.0,2.59],[38,4.0,3.35],
+    [45,3.0,3.11],[45,4.0,4.04],[57,3.0,4.00],[57,3.5,4.62],[57,4.0,5.23],
+    [76,3.5,6.26],[76,4.0,7.10],[76,5.0,8.75],[89,4.0,8.38],[89,5.0,10.36],
+    [108,4.0,10.26],[108,5.0,12.70],[108,6.0,15.09],[133,4.0,12.73],[133,5.0,15.78],
+    [159,5.0,18.99],[159,6.0,22.64],[219,6.0,31.52],[219,8.0,41.63],[219,10.0,51.54],
+    [273,8.0,52.28],[273,10.0,64.86],[325,10.0,77.68],[325,12.0,92.63],[426,14.0,142.26]
+  ]},
+  "Труба ГОСТ 10704-91 (электросварная)":{type:"pipe",data:[
+    [20,1.5,0.684],[20,2.0,0.888],[25,1.5,0.869],[25,2.0,1.134],[32,2.0,1.480],
+    [40,2.0,1.875],[40,3.0,2.737],[50,2.0,2.366],[50,3.0,3.478],[57,3.0,3.994],
+    [76,3.0,5.401],[89,3.0,6.363],[108,3.5,9.020],[114,4.0,10.85],[133,4.0,12.73],
+    [159,4.0,15.29],[219,5.0,26.39]
+  ]},
+  "Швеллер ГОСТ 8240-97 (серия У)":{type:"channel",data:[
+    [50,32,4.4,7.0,4.84],[65,36,4.4,7.2,5.90],[80,40,4.5,7.4,7.05],[100,46,4.5,7.6,8.59],
+    [120,52,4.8,7.8,10.40],[140,58,4.9,8.1,12.30],[160,64,5.0,8.4,14.20],[180,70,5.1,8.7,16.30],
+    [200,76,5.2,9.0,18.40],[220,82,5.4,9.5,21.00],[240,90,5.6,10.0,24.00],[270,95,6.0,10.5,27.70],
+    [300,100,6.5,11.0,31.80],[330,105,7.0,11.7,36.50]
+  ]},
+  "Двутавр ГОСТ 26020-83 (серия Б)":{type:"beam",data:[
+    [100,55,4.1,5.7,8.10],[120,64,4.4,6.2,10.40],[140,73,4.7,6.9,12.90],
+    [160,81,5.0,7.4,15.80],[180,90,5.1,8.0,18.40],[200,100,5.2,8.4,21.00],
+    [220,110,5.4,8.7,24.00],[240,115,5.6,9.5,27.30],[270,125,6.0,9.8,31.50],
+    [300,135,6.5,10.2,36.50]
+  ]},
+  "Уголок ГОСТ 8509-93 (равнополочный)":{type:"angle",data:[
+    [20,3,0.892],[20,4,1.150],[25,3,1.120],[25,4,1.460],[30,3,1.360],[30,4,1.780],
+    [35,3,1.600],[35,4,2.090],[40,3,1.840],[40,4,2.420],[40,5,2.970],[45,4,2.740],
+    [50,4,3.060],[50,5,3.770],[50,6,4.470],[63,5,4.810],[63,6,5.710],[75,6,6.890],
+    [90,8,10.90],[100,8,12.20],[100,10,15.10]
+  ]},
+  "Круг ГОСТ 2590-2006":{type:"circle",data:[
+    [6,0.222],[8,0.395],[10,0.617],[12,0.888],[14,1.208],[16,1.578],[18,1.998],
+    [20,2.466],[22,2.984],[25,3.853],[28,4.834],[30,5.549],[32,6.313],[36,7.990],
+    [40,9.865],[45,12.485],[50,15.413],[60,22.190],[70,30.210],[80,39.460]
+  ]}
+};
+
+const PROFILES = {
+  "Профиль направляющий ПН (UD)":{sizes:[["ПН-50×40×0.5",50,40,0.5,0.51],["ПН-50×40×0.6",50,40,0.6,0.61],["ПН-75×40×0.5",75,40,0.5,0.62],["ПН-75×40×0.6",75,40,0.6,0.74],["ПН-100×40×0.5",100,40,0.5,0.72],["ПН-100×40×0.6",100,40,0.6,0.86]]},
+  "Профиль стоечный ПС (CD)":{sizes:[["ПС-50×50×0.5",50,50,0.5,0.58],["ПС-50×50×0.6",50,50,0.6,0.70],["ПС-75×50×0.5",75,50,0.5,0.68],["ПС-75×50×0.6",75,50,0.6,0.82],["ПС-100×50×0.5",100,50,0.5,0.78],["ПС-100×50×0.6",100,50,0.6,0.94]]},
+  "Профиль потолочный ПП 60×27":{sizes:[["ПП-60×27×0.5",60,27,0.5,0.38],["ПП-60×27×0.6",60,27,0.6,0.46]]},
+  "Профиль направляющий ПН 28×27":{sizes:[["ПН-28×27×0.5",28,27,0.5,0.26],["ПН-28×27×0.6",28,27,0.6,0.31]]},
+  "Уголок защитный ПУ 31×31":{sizes:[["ПУ-31×31×0.4",31,31,0.4,0.15],["ПУ-31×31×0.5",31,31,0.5,0.18]]},
+  "Профиль маячковый ПМ 20×20":{sizes:[["ПМ-20×20×0.3",20,20,0.3,0.09],["ПМ-20×20×0.4",20,20,0.4,0.12],["ПМ-20×20×0.5",20,20,0.5,0.15]]},
+  "Уголок штукатурный перфорированный":{sizes:[["25×25×0.3",25,25,0.3,0.08],["25×25×0.4",25,25,0.4,0.11],["30×30×0.3",30,30,0.3,0.10],["30×30×0.4",30,30,0.4,0.13]]},
+  "Пластина перфорированная (лента)":{sizes:[["12×0.5",12,0,0.5,0.033],["20×0.5",20,0,0.5,0.055],["20×0.7",20,0,0.7,0.077],["30×0.7",30,0,0.7,0.115],["40×0.7",40,0,0.7,0.154]]}
+};
+
+const SB_DEGREES = {
+  "Sa 1 (лёгкая)":{min:5,max:15,time:0.075,desc:"Лёгкая: рыхлая ржавчина, окалина, старая краска"},
+  "Sa 2 (тщательная)":{min:15,max:30,time:0.125,desc:"Тщательная: окалина, ржавчина, остатки покрытий"},
+  "Sa 2½ (очень тщательная)":{min:30,max:60,time:0.200,desc:"До металлического блеска, под АКЗ"},
+  "Sa 3 (белая)":{min:60,max:100,time:0.325,desc:"100 % удаление загрязнений, максимальная адгезия"}
+};
+const SB_ABRASIVES = {
+  "Кварцевый песок":{kc:1.00,kt:1.00},"Купершлак":{kc:0.85,kt:0.90},
+  "Электрокорунд":{kc:0.70,kt:0.85},"Стальная дробь":{kc:0.30,kt:0.80}
+};
+
+const AKZ_STANDARDS = [
+  {name:"Эпоксидная грунтовка",cat:"Грунт",cmin:0.180,cmax:0.250,tsp:"60–80 мкм",layers:2,interval:"8–24 ч"},
+  {name:"Полиуретановая эмаль",cat:"Эмаль",cmin:0.120,cmax:0.160,tsp:"30–50 мкм",layers:2,interval:"12–36 ч"},
+  {name:"Цинконаполненный грунт",cat:"Грунт",cmin:0.200,cmax:0.300,tsp:"70–100 мкм",layers:1,interval:"12–24 ч"},
+  {name:"Акриловая эмаль",cat:"Эмаль",cmin:0.100,cmax:0.140,tsp:"25–40 мкм",layers:2,interval:"6–12 ч"},
+  {name:"Алкидная эмаль ПФ-115",cat:"Эмаль",cmin:0.100,cmax:0.150,tsp:"25–35 мкм",layers:2,interval:"24 ч"},
+  {name:"Грунтовка ГФ-021",cat:"Грунт",cmin:0.060,cmax:0.100,tsp:"15–20 мкм",layers:1,interval:"24 ч"},
+  {name:"Грунт-эмаль 3 в 1",cat:"Грунт-эмаль",cmin:0.070,cmax:0.120,tsp:"40–60 мкм",layers:2,interval:"24 ч"},
+  {name:"ХС-720 (хлоркаучуковая)",cat:"Эмаль",cmin:0.130,cmax:0.180,tsp:"30–40 мкм",layers:3,interval:"2–4 ч"},
+  {name:"ЭП-0010 (эпоксидная шпатлёвка)",cat:"Шпатлёвка",cmin:0.300,cmax:0.500,tsp:"100–200 мкм",layers:1,interval:"24 ч"},
+  {name:"КО-811 (кремнийорганическая)",cat:"Эмаль",cmin:0.120,cmax:0.170,tsp:"25–40 мкм",layers:2,interval:"2–6 ч"}
+];
+
+const STANDARDS_DATA = {
+  "Болт":{
+    "ГОСТ 7798":{diameters:[6,8,10,12,16,20,24,30],lengths:[10,12,16,20,25,30,40,50,60,80,100,120],coatings:["Без покрытия","Оцинкованный"],strength:["5.8","8.8","10.9"]},
+    "DIN 931":{diameters:[6,8,10,12,16,20,24,30],lengths:[20,30,40,50,60,70,80,100,120,150],coatings:["Без покрытия","Оцинкованный"],strength:["5.8","8.8","10.9"]}
+  },
+  "Винт":{
+    "DIN 912":{diameters:[3,4,5,6,8,10,12,16,20],lengths:[6,8,10,12,16,20,25,30,40,50,60,80,100],coatings:["Без покрытия","Оцинкованный"],strength:["8.8","10.9","12.9"]},
+    "DIN 7991":{diameters:[3,4,5,6,8,10,12,16,20],lengths:[6,8,10,12,16,20,25,30,40,50,60,80,100],coatings:["Без покрытия","Оцинкованный"],strength:["8.8","10.9"]}
+  },
+  "Гайка":{
+    "ГОСТ 5927":{diameters:[5,6,8,10,12,14,16,18,20,22,24,27,30,36],lengths:[],coatings:["Без покрытия","Оцинкованный"],strength:["5","6","8","10"]},
+    "DIN 934":{diameters:[6,8,10,12,16,20,24,30],lengths:[],coatings:["Без покрытия","Оцинкованный"],strength:["6","8","10"]}
+  },
+  "Гвоздь":{"ГОСТ 4028":{diameters:[2.5,3.0,3.5,4.0,4.5,5.0,6.0],lengths:[25,30,40,50,60,80,100,120],coatings:["Без покрытия","Оцинкованный"],strength:["—"]}},
+  "Саморез":{
+    "По дереву":{diameters:[3.5,3.9,4.2,4.8,6.3],lengths:[16,25,35,45,55,70,90],coatings:["Черный фосфатированный"],strength:["—"]},
+    "По металлу":{diameters:[3.5,3.9,4.2,4.8,5.5,6.3],lengths:[13,16,25,32,45,64,89,102],coatings:["Без покрытия","Оцинкованный"],strength:["—"]}
+  },
+  "Заклепка":{"Вытяжная":{diameters:[3.2,4.0,4.8,6.4],lengths:[6,8,10,12,16,20,25,30],coatings:["—","Оцинкованный"],strength:["—"]}},
+  "Дюбель":{"Распорный":{diameters:[5,6,8,10,12,14],lengths:[25,30,40,50,60,80,100],coatings:["—"],strength:["—"]}}
+};
+
+const COATING_FACTOR = {"Без покрытия":1.0,"Оцинкованный":1.02,"Черный фосфатированный":1.0,"—":1.0};
+const BOLT_PARAMS = {3:{S:5.5,k:2.0,d1:2.5},4:{S:7,k:2.8,d1:3.4},5:{S:8,k:3.5,d1:4.2},6:{S:10,k:4.0,d1:5.0},8:{S:13,k:5.3,d1:6.8},10:{S:17,k:6.4,d1:8.4},12:{S:19,k:7.5,d1:10.2},16:{S:24,k:10.0,d1:13.8},20:{S:30,k:12.5,d1:17.3},24:{S:36,k:15.0,d1:20.7},30:{S:46,k:18.7,d1:26.2}};
+const NUT_MASS = {5:1.44,6:2.20,8:5.10,10:8.40,12:14.0,14:20.0,16:29.0,18:38.0,20:51.0,22:64.0,24:79.0,27:110.0,30:140.0,36:230.0};
+
+const WELD_JOINTS = {
+  pipe:[
+    {code:"С2",name:"Стыковое без скоса"},{code:"С8",name:"Со скосом 1 кромки"},
+    {code:"С17",name:"С V-разделкой"},{code:"У5",name:"Угловое с фланцем"},
+    {code:"У7",name:"Угловое со скосом"},{code:"У8",name:"Угловое двустороннее"}
+  ],
+  sheet:[
+    {code:"Н1",name:"Нахлесточное 1-стор."},{code:"Н2",name:"Нахлесточное 2-стор."},
+    {code:"Т1",name:"Тавровое 1-стор."},{code:"Т3",name:"Тавровое 2-стор."},
+    {code:"У4",name:"Угловое 1-стор."},{code:"У5",name:"Угловое 2-стор."}
+  ],
+  bar:[{code:"С25",name:"Стыковое с косым резом"}]
+};
+
+// ============================== УТИЛИТЫ ==============================
+
+function num(id){const el=document.getElementById(id);if(!el)return 0;const v=parseFloat(String(el.value).trim().replace(',','.'));return isNaN(v)?0:v;}
+function fmt(v,d=3){return Number(v).toFixed(d);}
+function showResult(id,text,extra={}){const el=document.getElementById(id);if(!el)return;el.textContent=text;el.style.display='block';el.onclick=()=>copyText(text);if(extra.save)saveHistory(extra.tab,extra.history);}
+function copyText(t){navigator.clipboard.writeText(t).then(()=>showToast('✅ Скопировано')).catch(()=>{});}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function saveHistory(tab,text){
+  const key='calc_history_'+tab;
+  const list=JSON.parse(localStorage.getItem(key)||'[]');
+  list.push('['+new Date().toLocaleTimeString()+'] '+text);
+  if(list.length>100)list.splice(0,list.length-100);
+  localStorage.setItem(key,JSON.stringify(list));
+  renderHistory(tab);
+}
+function renderHistory(tab){
+  const el=document.getElementById(tab+'History');
+  if(!el)return;
+  const list=JSON.parse(localStorage.getItem('calc_history_'+tab)||'[]');
+  el.innerHTML=list.slice().reverse().map(t=>'<li>'+escapeHtml(t)+'</li>').join('');
+}
+function clearHistory(tab){localStorage.removeItem('calc_history_'+tab);renderHistory(tab);}
+
+// ============================== ВКЛАДКИ ==============================
+
+const TABS=[
+  ['rolled','📐 Металлопрокат'],['sortament','📋 Сортамент'],
+  ['profiles','📏 Профили'],['painting','🎨 Покраска'],
+  ['sandblast','🪨 Пескоструй'],['akzlib','🎨 Нормы АКЗ'],
+  ['fastener','🔩 Крепёж'],['insulation','🌡️ Изоляция'],
+  ['anticorr','🧪 Расчёт АКЗ'],['welding','⚡ Сварка'],
+  ['calc','🧮 Калькулятор'],['help','📖 Справка']
+];
+function initTabs(){
+  const nav=document.getElementById('tabsNav');
+  nav.innerHTML=TABS.map(([id,n],i)=>`<button class="${i===0?'active':''}" data-t="${id}">${n}</button>`).join('');
+  nav.querySelectorAll('button').forEach(b=>{
+    b.onclick=()=>{
+      nav.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      const target=document.querySelector(`.tab[data-tab="${b.dataset.t}"]`);
+      if(target)target.classList.add('active');
+    };
+  });
+}
+
+function initMaterials(){
+  const sel=document.getElementById('globalMaterial');
+  sel.innerHTML=Object.keys(MATERIALS).map(n=>`<option value="${MATERIALS[n]}">${n} (${MATERIALS[n]})</option>`).join('');
+  sel.onchange=()=>{currentDensity=parseFloat(sel.value);};
+}
+
+// ============================== МЕТАЛЛОПРОКАТ ==============================
+
+const ROLLED_TYPES={
+  pipe:{name:"Труба круглая",fields:[["D","Наружный диаметр","мм","57"],["s","Толщина стенки","мм","3.5"],["L","Длина","м","6"]],
+    calc:v=>Math.PI*((v.D/1000)-(v.s/1000))*(v.s/1000)*v.L*currentDensity},
+  circle:{name:"Круг (пруток)",fields:[["d","Диаметр","мм","20"],["L","Длина","м","6"]],
+    calc:v=>Math.PI*Math.pow(v.d/1000,2)/4*v.L*currentDensity},
+  sheet:{name:"Лист",fields:[["w","Ширина","мм","1000"],["L","Длина","мм","2000"],["t","Толщина","мм","3"]],
+    calc:v=>(v.w/1000)*(v.L/1000)*(v.t/1000)*currentDensity},
+  hexagon:{name:"Шестигранник",fields:[["S","Размер под ключ","мм","17"],["L","Длина","м","6"]],
+    calc:v=>Math.sqrt(3)/2*Math.pow(v.S/1000,2)*v.L*currentDensity},
+  angle:{name:"Уголок",fields:[["A","Полка A","мм","50"],["B","Полка B","мм","50"],["t","Толщина","мм","5"],["L","Длина","м","6"]],
+    calc:v=>((v.A/1000)+(v.B/1000)-(v.t/1000))*(v.t/1000)*v.L*currentDensity},
+  channel:{name:"Швеллер",fields:[["h","Высота","мм","100"],["b","Ширина полки","мм","46"],["s","Толщина","мм","4.5"],["L","Длина","м","6"]],
+    calc:v=>(((v.h/1000)-2*(v.s/1000))*(v.s/1000)+2*(v.b/1000)*(v.s/1000))*v.L*currentDensity},
+  beam:{name:"Двутавр",fields:[["h","Высота","мм","200"],["b","Ширина полки","мм","100"],["s","Стенка","мм","5.5"],["t","Полка","мм","8.5"],["L","Длина","м","6"]],
+    calc:v=>(((v.h/1000)-2*(v.t/1000))*(v.s/1000)+2*(v.b/1000)*(v.t/1000))*v.L*currentDensity}
+};
+
+function initRolled(){
+  const sel=document.getElementById('rolledType');
+  sel.innerHTML=Object.entries(ROLLED_TYPES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+  sel.onchange=renderRolledInputs;
+  renderRolledInputs();
+}
+function renderRolledInputs(){
+  const cfg=ROLLED_TYPES[document.getElementById('rolledType').value];
+  document.getElementById('rolledInputs').innerHTML=cfg.fields.map(([k,l,u,d])=>
+    `<div class="row"><label>${l}:</label><input type="text" id="rolled_${k}" value="${d}"><span class="unit">${u}</span></div>`).join('');
+}
+function calcRolled(){
+  const cfg=ROLLED_TYPES[document.getElementById('rolledType').value];
+  const v={};cfg.fields.forEach(([k])=>v[k]=num('rolled_'+k));
+  const mass=cfg.calc(v);
+  const params=cfg.fields.map(([k,l])=>`${l}=${v[k]}`).join(', ');
+  showResult('rolledResult',`Масса: ${fmt(mass)} кг`,
+    {save:true,tab:'rolled',history:`${cfg.name}\n  ${params}\n  → ${fmt(mass)} кг`});
+}
+function clearRolled(){renderRolledInputs();document.getElementById('rolledResult').style.display='none';}
+
+// ============================== СОРТАМЕНТ ==============================
+
+function initSortament(){
+  const sel=document.getElementById('sortType');
+  sel.innerHTML=Object.keys(SORTAMENT).map(k=>`<option>${k}</option>`).join('');
+  sel.onchange=renderSortInputs;
+  renderSortInputs();
+}
+function renderSortInputs(){
+  const key=document.getElementById('sortType').value;
+  const cfg=SORTAMENT[key];const box=document.getElementById('sortSizeInputs');
+  if(cfg.type==='pipe'){
+    const Ds=[...new Set(cfg.data.map(r=>r[0]))].sort((a,b)=>a-b);
+    box.innerHTML=`<div class="row"><label>Наружный D, мм:</label><select id="sortD">${Ds.map(d=>`<option>${d}</option>`).join('')}</select></div>
+      <div class="row"><label>Толщина стенки, мм:</label><select id="sortS"></select></div>`;
+    document.getElementById('sortD').onchange=()=>fillSortS(key);fillSortS(key);
+  }else if(cfg.type==='angle'){
+    const As=[...new Set(cfg.data.map(r=>r[0]))].sort((a,b)=>a-b);
+    box.innerHTML=`<div class="row"><label>Полка A, мм:</label><select id="sortA">${As.map(a=>`<option>${a}</option>`).join('')}</select></div>
+      <div class="row"><label>Толщина t, мм:</label><select id="sortT"></select></div>`;
+    document.getElementById('sortA').onchange=()=>fillSortT(key);fillSortT(key);
+  }else if(cfg.type==='circle'){
+    box.innerHTML=`<div class="row"><label>Диаметр d, мм:</label><select id="sortD">${cfg.data.map(r=>`<option>${r[0]}</option>`).join('')}</select></div>`;
+    document.getElementById('sortD').onchange=()=>updateSortInfo(key);updateSortInfo(key);
+  }else{
+    const hs=[...new Set(cfg.data.map(r=>r[0]))].sort((a,b)=>a-b);
+    box.innerHTML=`<div class="row"><label>Высота h, мм:</label><select id="sortH">${hs.map(h=>`<option>${h}</option>`).join('')}</select></div>`;
+    document.getElementById('sortH').onchange=()=>updateSortInfo(key);updateSortInfo(key);
+  }
+  updateSortInfo(key);
+}
+function fillSortS(key){
+  const cfg=SORTAMENT[key];const d=parseFloat(document.getElementById('sortD').value);
+  const ss=cfg.data.filter(r=>r[0]===d).map(r=>r[1]).sort((a,b)=>a-b);
+  document.getElementById('sortS').innerHTML=ss.map(s=>`<option>${s}</option>`).join('');
+  updateSortInfo(key);
+}
+function fillSortT(key){
+  const cfg=SORTAMENT[key];const a=parseFloat(document.getElementById('sortA').value);
+  const ts=cfg.data.filter(r=>r[0]===a).map(r=>r[1]).sort((a,b)=>a-b);
+  document.getElementById('sortT').innerHTML=ts.map(t=>`<option>${t}</option>`).join('');
+  updateSortInfo(key);
+}
+function getSortMass(key){
+  const cfg=SORTAMENT[key];
+  if(cfg.type==='pipe'){
+    const d=parseFloat(document.getElementById('sortD').value),s=parseFloat(document.getElementById('sortS').value);
+    const row=cfg.data.find(r=>r[0]===d&&r[1]===s);
+    return row?{mass:row[2],params:`D=${d} мм, s=${s} мм`}:null;
+  }else if(cfg.type==='angle'){
+    const a=parseFloat(document.getElementById('sortA').value),t=parseFloat(document.getElementById('sortT').value);
+    const row=cfg.data.find(r=>r[0]===a&&r[1]===t);
+    return row?{mass:row[2],params:`A=${a} мм, t=${t} мм`}:null;
+  }else if(cfg.type==='circle'){
+    const d=parseFloat(document.getElementById('sortD').value);
+    const row=cfg.data.find(r=>r[0]===d);
+    return row?{mass:row[1],params:`d=${d} мм`}:null;
+  }else{
+    const h=parseFloat(document.getElementById('sortH').value);
+    const row=cfg.data.find(r=>r[0]===h);
+    return row?{mass:row[4],params:`h=${h}, b=${row[1]}, s=${row[2]}, t=${row[3]}`}:null;
+  }
+}
+function updateSortInfo(key){
+  const info=getSortMass(key);
+  const mEl=document.getElementById('sortMassPerM'),pEl=document.getElementById('sortParams');
+  if(!info){mEl.textContent='—';pEl.textContent='—';return;}
+  mEl.textContent=`Масса 1 м: ${fmt(info.mass)} кг`;
+  pEl.textContent=info.params;
+}
+function calcSortament(){
+  const key=document.getElementById('sortType').value;
+  const info=getSortMass(key);if(!info){showToast('Выберите размер');return;}
+  const L=num('sortLength');if(L<=0){showToast('Введите длину');return;}
+  const total=info.mass*L;
+  showResult('sortResult',`Общая масса: ${fmt(total)} кг`,
+    {save:true,tab:'sortament',history:`${key}\n  ${info.params}, L=${L} м\n  → ${fmt(total)} кг`});
+}
+
+// ============================== ПРОФИЛИ ==============================
+
+function initProfiles(){
+  const sel=document.getElementById('profileType');
+  sel.innerHTML=Object.keys(PROFILES).map(k=>`<option>${k}</option>`).join('');
+  sel.onchange=renderProfileSizes;renderProfileSizes();
+}
+function renderProfileSizes(){
+  const key=document.getElementById('profileType').value;
+  const sizeSel=document.getElementById('profileSize');
+  sizeSel.innerHTML=PROFILES[key].sizes.map(s=>`<option>${s[0]}</option>`).join('');
+  sizeSel.onchange=updateProfileInfo;updateProfileInfo();
+}
+function getProfileMass(){
+  const key=document.getElementById('profileType').value;
+  const sn=document.getElementById('profileSize').value;
+  const row=PROFILES[key].sizes.find(s=>s[0]===sn);
+  return row?{row,mass:row[4],name:sn}:null;
+}
+function updateProfileInfo(){
+  const info=getProfileMass();const el=document.getElementById('profileInfo');
+  if(!info){el.textContent='—';return;}
+  const [_,b,h,s]=info.row;
+  const geom=h>0?`b=${b} мм, h=${h} мм, s=${s} мм`:`b=${b} мм, s=${s} мм (лента)`;
+  el.textContent=`Масса 1 м: ${fmt(info.mass)} кг · ${geom}`;
+}
+function calcProfiles(){
+  const info=getProfileMass();if(!info)return;
+  const L=num('profileLength'),qty=parseInt(num('profileQty'));
+  if(L<=0||qty<=0){showToast('Проверьте данные');return;}
+  const tl=L*qty,tm=info.mass*tl;
+  const key=document.getElementById('profileType').value;
+  showResult('profileResult',`Общая масса: ${fmt(tm)} кг (${fmt(tl,2)} м)`,
+    {save:true,tab:'profiles',history:`${key} · ${info.name}\n  L=${L} м × ${qty} шт = ${fmt(tl,2)} м\n  → ${fmt(tm)} кг`});
+}
+
+// ============================== ПОКРАСКА ==============================
+
+const PAINT_TYPES={
+  pipe:{name:"Труба круглая",fields:[["D","Наружный диаметр","мм","219"],["L","Длина","м","12"]],
+    calc:v=>Math.PI*(v.D/1000)*v.L},
+  circle:{name:"Круг (пруток)",fields:[["d","Диаметр","мм","20"],["L","Длина","м","6"]],
+    calc:v=>Math.PI*(v.d/1000)*v.L},
+  sheet:{name:"Лист",fields:[["w","Ширина","мм","1000"],["L","Длина","мм","2000"]],
+    calc:v=>2*(v.w/1000)*(v.L/1000)},
+  angle:{name:"Уголок",fields:[["A","Полка A","мм","50"],["B","Полка B","мм","50"],["L","Длина","м","6"]],
+    calc:v=>(2*(v.A/1000)+2*(v.B/1000))*v.L},
+  channel:{name:"Швеллер",fields:[["h","Высота","мм","100"],["b","Ширина","мм","46"],["s","Стенка","мм","4.5"],["L","Длина","м","6"]],
+    calc:v=>(2*(v.h/1000)+4*(v.b/1000)-2*(v.s/1000))*v.L}
+};
+function initPainting(){
+  const sel=document.getElementById('paintType');
+  sel.innerHTML=Object.entries(PAINT_TYPES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+  sel.onchange=renderPaintInputs;renderPaintInputs();
+}
+function renderPaintInputs(){
+  const cfg=PAINT_TYPES[document.getElementById('paintType').value];
+  document.getElementById('paintInputs').innerHTML=cfg.fields.map(([k,l,u,d])=>
+    `<div class="row"><label>${l}:</label><input type="text" id="paint_${k}" value="${d}"><span class="unit">${u}</span></div>`).join('');
+}
+function calcPainting(){
+  const cfg=PAINT_TYPES[document.getElementById('paintType').value];
+  const v={};cfg.fields.forEach(([k])=>v[k]=num('paint_'+k));
+  const layers=parseInt(num('paintLayers'))||1,cons=num('paintCons'),loss=num('paintLoss')/100;
+  const area=cfg.calc(v),perLayer=area*cons,total=perLayer*layers*(1+loss);
+  showResult('paintArea',`Площадь окраски: ${fmt(area,4)} м²`);
+  showResult('paintPerLayer',`Расход на 1 слой: ${fmt(perLayer,4)} кг`);
+  showResult('paintTotal',`Полный расход: ${fmt(total,4)} кг`,
+    {save:true,tab:'painting',history:`${cfg.name}\n  S=${fmt(area,2)} м², слоёв=${layers}, потери=${loss*100}%\n  → ${fmt(total,3)} кг`});
+}
+
+// ============================== ПЕСКОСТРУЙ ==============================
+
+function initSandblast(){
+  const dSel=document.getElementById('sbDegree');
+  dSel.innerHTML=Object.keys(SB_DEGREES).map(k=>`<option>${k}</option>`).join('');
+  const aSel=document.getElementById('sbAbrasive');
+  aSel.innerHTML=Object.keys(SB_ABRASIVES).map(k=>`<option>${k}</option>`).join('');
+  dSel.onchange=aSel.onchange=updateSbInfo;updateSbInfo();
+}
+function updateSbInfo(){
+  const d=SB_DEGREES[document.getElementById('sbDegree').value];
+  const a=SB_ABRASIVES[document.getElementById('sbAbrasive').value];
+  document.getElementById('sbInfo').textContent=
+    `${d.desc}\nНорма: ${d.min}–${d.max} кг/м², время: ${d.time} н/ч на м².\nПоправка абразива: расход ×${a.kc}, время ×${a.kt}.`;
+}
+function calcSandblast(){
+  const d=SB_DEGREES[document.getElementById('sbDegree').value];
+  const a=SB_ABRASIVES[document.getElementById('sbAbrasive').value];
+  const area=num('sbArea'),passes=parseInt(num('sbPasses'))||1;
+  if(area<=0){showToast('Введите площадь');return;}
+  const avg=(d.min+d.max)/2;
+  const abrM2=avg*a.kc,timeM2=d.time*a.kt;
+  const abrTotal=abrM2*area*passes,timeTotal=timeM2*area*passes;
+  showResult('sbAbrPerM2',`Норма абразива: ${fmt(abrM2)} кг/м²`);
+  showResult('sbAbrTotal',`Расход абразива: ${fmt(abrTotal)} кг`);
+  showResult('sbTimePerM2',`Норма времени: ${fmt(timeM2,4)} н/ч на м²`);
+  showResult('sbTimeTotal',`Трудоёмкость: ${fmt(timeTotal)} н/ч`,
+    {save:true,tab:'sandblast',history:`${document.getElementById('sbDegree').value} | ${document.getElementById('sbAbrasive').value}\n  S=${area} м², проходов=${passes}\n  → абразив ${fmt(abrTotal,2)} кг; труд ${fmt(timeTotal,2)} н/ч`});
+}
+
+// ============================== НОРМЫ АКЗ ==============================
+
+function initAkzLib(){
+  const sel=document.getElementById('akzMat');
+  sel.innerHTML=AKZ_STANDARDS.map((m,i)=>`<option value="${i}">${m.name}</option>`).join('');
+  sel.onchange=updateAkzInfo;updateAkzInfo();
+}
+function updateAkzInfo(){
+  const m=AKZ_STANDARDS[parseInt(document.getElementById('akzMat').value)];
+  document.getElementById('akzMatInfo').textContent=
+    `${m.cat} · Расход ${m.cmin}–${m.cmax} кг/м² · ТСП ${m.tsp} · Слоёв ${m.layers} · Интервал ${m.interval}`;
+}
+function calcAkzLib(){
+  const m=AKZ_STANDARDS[parseInt(document.getElementById('akzMat').value)];
+  const area=num('akzArea');if(area<=0){showToast('Введите площадь');return;}
+  const layers=parseInt(num('akzLayers'))||m.layers;
+  const avg=(m.cmin+m.cmax)/2;
+  const total=avg*area*layers;
+  showResult('akzResult',`Расход: ${fmt(total)} кг`,
+    {save:true,tab:'akzlib',history:`ЛКМ: ${m.name}\n  S=${area} м², слоёв=${layers}, норма=${avg} кг/м²\n  → ${fmt(total)} кг`});
+}
+
+// ============================== КРЕПЁЖ ==============================
+
+let fastenerRowId=0;
+function initFastener(){fastenerAddRow();}
+function fastenerAddRow(){
+  const tbody=document.querySelector('#fastenerTable tbody');
+  const tr=document.createElement('tr');
+  const rowId=++fastenerRowId;
+  const typeOpts=Object.keys(STANDARDS_DATA).map(k=>`<option>${k}</option>`).join('');
+  tr.innerHTML=`
+    <td>${rowId}</td>
+    <td><select data-f="type">${typeOpts}</select></td>
+    <td><select data-f="std"></select></td>
+    <td><select data-f="diam"></select></td>
+    <td><select data-f="len"></select></td>
+    <td><select data-f="thick"></select></td>
+    <td><select data-f="coat"></select></td>
+    <td><select data-f="str"></select></td>
+    <td><input type="text" data-f="qty" value="1"></td>
+    <td data-f="w1">—</td><td data-f="wt">—</td>
+    <td><button class="btn danger" style="padding:2px 8px;font-size:11px" onclick="this.closest('tr').remove()">✕</button></td>`;
+  tbody.appendChild(tr);
+  const typeSel=tr.querySelector('[data-f="type"]');
+  typeSel.onchange=()=>fillFastenerRow(tr);
+  fillFastenerRow(tr);
+}
+function fillFastenerRow(tr){
+  const type=tr.querySelector('[data-f="type"]').value;
+  const std=tr.querySelector('[data-f="std"]');
+  const stdKeys=Object.keys(STANDARDS_DATA[type]);
+  std.innerHTML=stdKeys.map(k=>`<option>${k}</option>`).join('');
+  std.onchange=()=>fillFastenerSizes(tr);
+  fillFastenerSizes(tr);
+}
+function fillFastenerSizes(tr){
+  const type=tr.querySelector('[data-f="type"]').value;
+  const std=tr.querySelector('[data-f="std"]').value;
+  const data=STANDARDS_DATA[type][std];
+  const setOpts=(sel,arr)=>{sel.innerHTML=arr.length?arr.map(v=>`<option>${v}</option>`).join(''):'<option>—</option>';};
+  setOpts(tr.querySelector('[data-f="diam"]'),data.diameters);
+  setOpts(tr.querySelector('[data-f="len"]'),data.lengths);
+  setOpts(tr.querySelector('[data-f="thick"]'),[1.0,1.2,1.5,2.0]);
+  setOpts(tr.querySelector('[data-f="coat"]'),data.coatings);
+  setOpts(tr.querySelector('[data-f="str"]'),data.strength);
+}
+function calcFastener(){
+  const rows=document.querySelectorAll('#fastenerTable tbody tr');
+  let total=0;
+  rows.forEach(tr=>{
+    const g=f=>tr.querySelector(`[data-f="${f}"]`).value;
+    const type=g('type'),std=g('std'),diam=parseFloat(g('diam'))||0,len=parseFloat(g('len'))||0,thick=parseFloat(g('thick'))||0;
+    const coat=g('coat'),qty=parseInt(g('qty'))||0;
+    if(!qty||!diam)return;
+    const w1=computeWeight(type,std,diam,len,thick);
+    const wf=w1*(COATING_FACTOR[coat]??1.0);
+    const wt=wf*qty;
+    tr.querySelector('[data-f="w1"]').textContent=fmt(wf,6);
+    tr.querySelector('[data-f="wt"]').textContent=fmt(wt,3);
+    total+=wt;
+  });
+  showResult('fastenerResult',`Общий вес: ${fmt(total)} кг`,
+    {save:true,tab:'fastener',history:`Расчёт крепежа (${rows.length} строк)\n  → ${fmt(total)} кг`});
+}
+function computeWeight(type,std,d,len,thick){
+  try{
+    const D=7850;
+    if(type==='Болт'){
+      const p=BOLT_PARAMS[Math.round(d)];
+      if(!p)return 0;
+      const stem=Math.PI*Math.pow(p.d1/1000,2)/4*(len/1000)*D;
+      const head=0.866*Math.pow(p.S/1000,2)*(p.k/1000)*D;
+      return stem+head;
+    }
+    if(type==='Винт')return computeWeight('Болт',std,d,len,thick)*0.9;
+    if(type==='Гайка'){
+      const di=Math.round(d);
+      if(NUT_MASS[di])return NUT_MASS[di]/1000;
+      return Math.PI*Math.pow(di/1000,2)/4*(di*0.8/1000)*D*0.8;
+    }
+    if(type==='Гвоздь'){
+      const dd=d/1000,L=len/1000;
+      const stem=Math.PI*Math.pow(dd,2)/4*L*D;
+      const head=Math.PI*Math.pow(2.5*dd,2)/4*(0.1*dd)*D;
+      return stem+head;
+    }
+    if(type==='Саморез')return Math.PI*Math.pow(d/1000,2)/4*(len/1000)*D*0.85;
+    if(type==='Заклепка')return Math.PI*Math.pow(d/1000,2)/4*(len/1000)*D*0.6;
+    if(type==='Дюбель')return Math.PI*Math.pow(d/1000,2)/4*(len/1000)*1200;
+    return 0;
+  }catch(e){return 0;}
+}
+function fastenerClearAll(){
+  document.querySelector('#fastenerTable tbody').innerHTML='';
+  fastenerAddRow();document.getElementById('fastenerResult').style.display='none';
+}
+
+// ============================== ИЗОЛЯЦИЯ ==============================
+
+function initInsulation(){
+  document.getElementById('insType').onchange=renderInsInputs;renderInsInputs();
+}
+function renderInsInputs(){
+  const t=document.getElementById('insType').value;const box=document.getElementById('insInputs');
+  if(t==='single')box.innerHTML=`
+    <div class="row"><label>D, м:</label><input type="text" id="ins_D" value="0.125"><span class="unit">м</span></div>
+    <div class="row"><label>t, м:</label><input type="text" id="ins_t" value="0.08"><span class="unit">м</span></div>
+    <div class="row"><label>L, м:</label><input type="text" id="ins_L" value="130"><span class="unit">м</span></div>`;
+  else if(t==='v1')box.innerHTML=`
+    <div class="row"><label>D1, м:</label><input type="text" id="ins_D1" value="0.108"><span class="unit">м</span></div>
+    <div class="row"><label>D2, м:</label><input type="text" id="ins_D2" value="0.076"><span class="unit">м</span></div>
+    <div class="row"><label>t, м:</label><input type="text" id="ins_t" value="0.1"><span class="unit">м</span></div>
+    <div class="row"><label>Зазор p, м:</label><input type="text" id="ins_p" value="0.1"><span class="unit">м</span></div>
+    <div class="row"><label>L, м:</label><input type="text" id="ins_L" value="65"><span class="unit">м</span></div>`;
+  else box.innerHTML=`
+    <div class="row"><label>D1, м:</label><input type="text" id="ins_D1" value="0.108"><span class="unit">м</span></div>
+    <div class="row"><label>M, м:</label><input type="text" id="ins_M" value="0.384"><span class="unit">м</span></div>
+    <div class="row"><label>t, м:</label><input type="text" id="ins_t" value="0.1"><span class="unit">м</span></div>
+    <div class="row"><label>L, м:</label><input type="text" id="ins_L" value="65"><span class="unit">м</span></div>`;
+}
+function calcInsulation(){
+  const t=document.getElementById('insType').value;
+  let Sr,Spi,Vi,label;
+  if(t==='single'){
+    const D=num('ins_D'),th=num('ins_t'),L=num('ins_L');
+    Sr=Math.PI*D*L;Spi=Math.PI*(D+2*th)*L;Vi=Math.PI*th*(D+th)*L;
+    label=`Одна труба D=${D}, t=${th}, L=${L}`;
+  }else if(t==='v1'){
+    const D1=num('ins_D1'),D2=num('ins_D2'),th=num('ins_t'),p=num('ins_p'),L=num('ins_L');
+    const M=D2+2*p;
+    Sr=(Math.PI*D1+2*M)*L;Spi=(Math.PI*(D1+2*th)+2*M)*L;
+    const So=Math.PI/4*Math.pow(D1+2*th,2)+M*(D1+2*th),Si=Math.PI/4*Math.pow(D1,2)+M*D1;
+    Vi=(So-Si)*L;label=`Пучок(3) D1=${D1},D2=${D2},t=${th},p=${p},L=${L}`;
+  }else{
+    const D1=num('ins_D1'),M=num('ins_M'),th=num('ins_t'),L=num('ins_L');
+    Sr=(Math.PI*D1+2*M)*L;Spi=(Math.PI*(D1+2*th)+2*M)*L;
+    const So=Math.PI/4*Math.pow(D1+2*th,2)+M*(D1+2*th),Si=Math.PI/4*Math.pow(D1,2)+M*D1;
+    Vi=(So-Si)*L;label=`Пучок(2+) D1=${D1},M=${M},t=${th},L=${L}`;
+  }
+  showResult('insSr',`Sr: ${fmt(Sr,4)} м²`);
+  showResult('insSpi',`Spi: ${fmt(Spi,4)} м²`);
+  showResult('insVi',`Vi: ${fmt(Vi,4)} м³`,
+    {save:true,tab:'insulation',history:`${label}\n  → Sr=${fmt(Sr,3)} м², Vi=${fmt(Vi,3)} м³`});
+}
+
+// ============================== РАСЧЁТ АКЗ ИЗ EXCEL ==============================
+
+let anticorrData={};
+function initAnticorr(){
+  document.getElementById('excelFile').onchange=loadExcel;
+}
+function loadExcel(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+      anticorrData={};
+      wb.SheetNames.forEach(sn=>{
+        if(sn==='Оглавление'||sn==='литература')return;
+        const sheet=wb.Sheets[sn];
+        const rows=XLSX.utils.sheet_to_json(sheet,{header:1});
+        const vests=[];let cur=null,lastNum=null;
+        for(let i=1;i<rows.length;i++){
+          const r=rows[i]||[];
+          const vn=r[0]?String(r[0]).trim():'';
+          const purpose=r[1]?String(r[1]).trim():'';
+          const mat=r[2]?String(r[2]).trim():'';
+          const mark=r[3]?String(r[3]).trim():'';
+          const n1=typeof r[7]==='number'?r[7]:0;
+          const layers=typeof r[8]==='number'?r[8]:0;
+          let total=typeof r[10]==='number'?r[10]:0;
+          if(!total&&n1&&layers)total=n1*layers;
+          if(vn&&vn!=='NaN'){
+            if(cur&&vn!==lastNum&&cur.materials.length)vests.push(cur);
+            if(!cur||vn!==lastNum){cur={num:vn,materials:[]};lastNum=vn;}
+          }
+          if(mat&&mat!=='NaN'&&total>0&&cur)cur.materials.push({mat,mark,layers,total,n1});
+        }
+        if(cur&&cur.materials.length)vests.push(cur);
+        if(vests.length)anticorrData[sn]=vests;
+      });
+      const secSel=document.getElementById('akzSection');
+      secSel.innerHTML=Object.keys(anticorrData).map(k=>`<option>${k}</option>`).join('');
+      secSel.onchange=fillAkzVest;fillAkzVest();
+      document.getElementById('excelInfo').textContent=`Загружено: ${file.name} · разделов: ${Object.keys(anticorrData).length}`;
+    }catch(err){document.getElementById('excelInfo').textContent='Ошибка: '+err.message;}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function fillAkzVest(){
+  const sec=document.getElementById('akzSection').value;
+  const sel=document.getElementById('akzVest');
+  sel.innerHTML=(anticorrData[sec]||[]).map((v,i)=>`<option value="${i}">Ведомость ${v.num} (${v.materials.length} материалов)</option>`).join('');
+}
+function calcAnticorr(){
+  const sec=document.getElementById('akzSection').value;
+  const idx=parseInt(document.getElementById('akzVest').value);
+  if(!sec||isNaN(idx)){showToast('Загрузите файл Excel');return;}
+  const vest=anticorrData[sec][idx];
+  if(!vest){showToast('Ведомость не найдена');return;}
+  const area=num('akzExcelArea');if(area<=0){showToast('Введите площадь');return;}
+  const layText=document.getElementById('akzExcelLayers').value;
+  const userLayers=layText==='По умолчанию'?null:parseInt(layText);
+  let total=0,details=[];
+  vest.materials.forEach(m=>{
+    const norm=userLayers?m.n1*userLayers:m.total;
+    const t=norm*area;total+=t;
+    details.push(`• ${m.mat} ${m.mark}: норма ${norm.toFixed(4)} кг/м² → ${t.toFixed(4)} кг`);
+  });
+  showResult('anticorrResult',`Итого: ${total.toFixed(4)} кг`,
+    {save:true,tab:'anticorr',history:`${sec}, ведомость ${vest.num}\n  S=${area} м²\n  → ${total.toFixed(4)} кг`});
+  document.getElementById('anticorrDetails').innerHTML=details.join('<br>');
+}
+
+// ============================== СВАРКА ==============================
+
+function initWelding(){
+  document.getElementById('weldCat').onchange=fillWeldJoints;
+  document.getElementById('weldJoint').onchange=()=>{renderWeldInputs();renderWeldScheme();};
+  fillWeldJoints();
+}
+function fillWeldJoints(){
+  const cat=document.getElementById('weldCat').value;
+  document.getElementById('weldJoint').innerHTML=WELD_JOINTS[cat].map(j=>`<option value="${j.code}">${j.code} — ${j.name}</option>`).join('');
+  renderWeldInputs();renderWeldScheme();
+}
+function renderWeldInputs(){
+  const cat=document.getElementById('weldCat').value;
+  const box=document.getElementById('weldInputs');
+  if(cat==='pipe')box.innerHTML=`
+    <div class="row"><label>Наружный D, мм:</label><input type="text" id="w_D" value="219"><span class="unit">мм</span></div>
+    <div class="row"><label>Толщина стенки S, мм:</label><input type="text" id="w_S" value="6"><span class="unit">мм</span></div>
+    <div class="row"><label>Количество стыков:</label><input type="text" id="w_N" value="4"><span class="unit">шт</span></div>`;
+  else if(cat==='sheet')box.innerHTML=`
+    <div class="row"><label>Толщина листа S, мм:</label><input type="text" id="w_S" value="8"><span class="unit">мм</span></div>
+    <div class="row"><label>Длина швов L, м:</label><input type="text" id="w_L" value="10"><span class="unit">м</span></div>`;
+  else box.innerHTML=`
+    <div class="row"><label>Диаметр d, мм:</label><input type="text" id="w_d" value="25"><span class="unit">мм</span></div>
+    <div class="row"><label>Количество стыков:</label><input type="text" id="w_N" value="10"><span class="unit">шт</span></div>`;
+}
+function renderWeldScheme(){
+  const code=document.getElementById('weldJoint').value;
+  const svg=schemes[code]||'<svg class="weld-scheme"><text x="50%" y="50%" fill="#8b949e" text-anchor="middle">Схема не определена</text></svg>';
+  document.getElementById('weldScheme').innerHTML=svg;
+}
+const schemes={
+  'С2':`<svg class="weld-scheme" viewBox="0 0 320 120"><rect x="20" y="40" width="120" height="40" fill="#475569" stroke="#64748b"/><rect x="180" y="40" width="120" height="40" fill="#475569" stroke="#64748b"/><path d="M140,40 Q160,25 180,40 L180,80 Q160,95 140,80 Z" fill="#38bdf8" opacity="0.7"/><text x="160" y="115" fill="#94a3b8" font-size="11" text-anchor="middle">Стык С2 (зазор)</text></svg>`,
+  'С17':`<svg class="weld-scheme" viewBox="0 0 320 120"><polygon points="20,40 120,40 140,80 20,80" fill="#475569" stroke="#64748b"/><polygon points="200,40 300,40 300,80 180,80" fill="#475569" stroke="#64748b"/><path d="M120,40 Q160,15 200,40 L180,80 L140,80 Z" fill="#38bdf8" opacity="0.7"/><text x="160" y="115" fill="#94a3b8" font-size="11" text-anchor="middle">Стык С17 (V-разделка)</text></svg>`,
+  'У5':`<svg class="weld-scheme" viewBox="0 0 320 120"><rect x="40" y="70" width="240" height="25" fill="#475569" stroke="#64748b"/><rect x="140" y="15" width="40" height="55" fill="#475569" stroke="#64748b"/><path d="M140,70 L120,70 L140,50 Z" fill="#38bdf8" opacity="0.7"/><text x="160" y="115" fill="#94a3b8" font-size="11" text-anchor="middle">Угловое У5 (фланец)</text></svg>`,
+  'Н1':`<svg class="weld-scheme" viewBox="0 0 320 120"><rect x="30" y="30" width="160" height="25" fill="#475569" stroke="#64748b"/><rect x="130" y="55" width="160" height="25" fill="#475569" stroke="#64748b"/><path d="M190,55 L190,30 L210,55 Z" fill="#38bdf8" opacity="0.7"/><text x="160" y="115" fill="#94a3b8" font-size="11" text-anchor="middle">Нахлёст Н1 (1 шов)</text></svg>`,
+  'Н2':`<svg class="weld-scheme" viewBox="0 0 320 120"><rect x="30" y="30" width="160" height="25" fill="#475569" stroke="#64748b"/><rect x="130" y="55" width="160" height="25" fill="#475569" stroke="#64748b"/><path d="M190,55 L190,30 L210,55 Z" fill="#38bdf8" opacity="0.7"/><path d="M130,55 L130,80 L110,55 Z" fill="#38bdf8" opacity="0.7"/><text x="160" y="115" fill="#94a3b8" font-size="11" text-anchor="middle">Нахлёст Н2 (2 шва)</text></svg>`,
+  'Т1':`<svg class="weld-scheme" viewBox="0 0 320 120"><rect x="40" y="70" width="240" height="25" fill="#475569" stroke="#64748b"/><rect x="140" y="15" width="40" height="55" fill="#475569" stroke="#64748b"/><path d="M140,70 L120,70 L140,50 Z" fill="#38bdf8" opacity="0.7"/><text x="160" y="115" fill="#94a3b8" font-size="11" text-anchor="middle">Тавровое Т1</text></svg>`,
+  'Т3':`<svg class="weld-scheme" viewBox="0 0 320 120"><rect x="40" y="70" width="240" height="25" fill="#475569" stroke="#64748b"/><rect x="140" y="15" width="40" height="55" fill="#475569" stroke="#64748b"/><path d="M140,70 L120,70 L140,50 Z" fill="#38bdf8" opacity="0.7"/><path d="M180,70 L200,70 L180,50 Z" fill="#38bdf8" opacity="0.7"/><text x="160" y="115" fill="#94a3b8" font-size="11" text-anchor="middle">Тавровое Т3</text></svg>`,
+  'У4':`<svg class="weld-scheme" viewBox="0 0 320 120"><rect x="60" y="70" width="200" height="25" fill="#475569" stroke="#64748b"/><rect x="60" y="20" width="25" height="50" fill="#475569" stroke="#64748b"/><path d="M85,70 L100,70 L85,50 Z" fill="#38bdf8" opacity="0.7"/><text x="160" y="115" fill="#94a3b8" font-size="11" text-anchor="middle">Угловое У4</text></svg>`,
+  'С25':`<svg class="weld-scheme" viewBox="0 0 320 120"><polygon points="30,30 120,30 90,70 30,70" fill="#475569" stroke="#64748b"/><polygon points="200,30 290,30 290,70 230,70" fill="#475569" stroke="#64748b"/><path d="M120,30 L200,30 L230,70 L90,70 Z" fill="#38bdf8" opacity="0.7"/><text x="160" y="115" fill="#94a3b8" font-size="11" text-anchor="middle">Пруток С25</text></svg>`
+};
+function calcWelding(){
+  const cat=document.getElementById('weldCat').value;
+  const joint=document.getElementById('weldJoint').value;
+  const method=parseInt(document.getElementById('weldMethod').value);
+  const pos=parseInt(document.getElementById('weldPos').value);
+  const qual=parseInt(document.getElementById('weldQual').value);
+  const kPos=[1.0,1.05,1.10,1.20,1.07][pos];
+  const kLoss=[1.0,1.08][qual];
+  const kMethod=[1.50,1.12,1.05,1.03][method];
+  const DENSITY=7850;
+  let F=0,length_m=0;
+  if(cat==='pipe'){
+    const D=num('w_D'),S=num('w_S'),N=parseInt(num('w_N'));
+    if(!D||!S||!N)return;
+    length_m=Math.PI*(D-S)/1000*N;
+    if(joint==='С2')F=S*1.5+0.75*(S+1.5+2)*1.5;
+    else if(joint==='С17'){const c=1.5,ang=60,h=S-c,b=2*(h*Math.tan(ang/2*Math.PI/180));F=S*2+0.5*b*h+0.75*(2+b+2)*2;}
+    else if(joint==='У5'||joint==='У8'){const K=S;F=0.5*K*K+0.2*K*K;if(joint==='У8')F*=2;}
+    else F=S*1.5+1.5;
+  }else if(cat==='sheet'){
+    const S=num('w_S'),L=num('w_L');if(!S||!L)return;
+    length_m=L;
+    const Fs=0.5*S*S*1.2;
+    F=(joint==='Н2'||joint==='Т3'||joint==='У5')?Fs*2:Fs;
+  }else{
+    const d=num('w_d'),N=parseInt(num('w_N'));if(!d||!N)return;
+    length_m=Math.PI*d/1000*N;
+    F=Math.PI*d*d/4*0.45;
+  }
+  const massPure=F*1e-6*length_m*DENSITY;
+  const massTotal=massPure*kMethod*kPos*kLoss;
+  showResult('weldLen',`Протяжённость: ${fmt(length_m,2)} м`);
+  showResult('weldF',`Площадь шва: ${fmt(F,2)} мм²`);
+  showResult('weldPure',`Чистый наплав: ${fmt(massPure)} кг`);
+  showResult('weldTotal',`Расход материалов: ${fmt(massTotal)} кг`,
+    {save:true,tab:'welding',history:`${cat} · ${joint}\n  L=${fmt(length_m,2)} м, F=${fmt(F,2)} мм²\n  → ${fmt(massTotal)} кг`});
+  document.getElementById('weldGas').style.display='none';
+  if(method===1){
+    showResult('weldGas',`Расход CO₂: ${fmt(massPure*1.25,2)} кг`);
+  }else if(method===2){
+    const arL=length_m*120;
+    showResult('weldGas',`Расход Ar: ${ar0(arL)} л (${fmt(arL/6000,2)} баллонов)`);
+  }
+}
+function ar0(v){return Math.round(v);}
+
+// ============================== КАЛЬКУЛЯТОР ==============================
+
+let calcExpr='';
+function calcInput(ch){
+  const disp=document.getElementById('calcDisplay');
+  if(ch==='C'||ch==='CE'){calcExpr='';disp.textContent='0';return;}
+  if(ch==='⌫'){calcExpr=calcExpr.slice(0,-1);disp.textContent=calcExpr||'0';return;}
+  if(ch==='='){
+    try{
+      if(!/^[\d+\-*/(). ]+$/.test(calcExpr))throw new Error('bad');
+      const r=Function('"use strict";return ('+calcExpr+')')();
+      disp.textContent=r;
+      saveHistory('calc',`${calcExpr} = ${r}`);
+      calcExpr=String(r);
+    }catch(e){disp.textContent='Ошибка';calcExpr='';}
+    return;
+  }
+  calcExpr+=ch;disp.textContent=calcExpr;
+}
+
+// ============================== СТАРТ ==============================
+
+document.addEventListener('DOMContentLoaded',()=>{
+  initTabs();initMaterials();initRolled();initSortament();initProfiles();
+  initPainting();initSandblast();initAkzLib();initFastener();
+  initInsulation();initAnticorr();initWelding();
+  ['rolled','sortament','profiles','painting','sandblast','akzlib','fastener','insulation','anticorr','welding','calc'].forEach(renderHistory);
+});
+</script>
+</body>
+</html>
