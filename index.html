@@ -57,10 +57,21 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px;border-t
 .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--green);color:#1e1e1e;padding:12px 25px;border-radius:6px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:1000;}
 .toast.show{opacity:1;}
 table.fastener{width:100%;border-collapse:collapse;font-size:11px;}
-table.fastener th{background:var(--bg3);color:#ccc;padding:6px;border:1px solid var(--border);text-align:left;position:sticky;top:0;}
+table.fastener th{background:var(--bg3);color:#ccc;padding:6px;border:1px solid var(--border);text-align:left;position:sticky;top:0;z-index:5;}
 table.fastener td{padding:3px;border:1px solid var(--border);}
 table.fastener select,table.fastener input{min-height:26px;padding:3px 5px;font-size:11px;width:100%;}
 svg.weld-scheme{width:100%;max-width:320px;height:120px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;}
+
+/* Тетрис / 2048 */
+.game-wrap{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;}
+canvas.game-canvas{background:#0a0812;border:2px solid var(--green);border-radius:6px;display:block;max-width:100%;height:auto;}
+.game-side{display:flex;flex-direction:column;gap:10px;min-width:220px;max-width:300px;}
+.game-side .stat{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px 14px;font-size:13px;color:#ccc;display:flex;justify-content:space-between;align-items:center;}
+.game-side .stat strong{color:var(--green);font-size:16px;}
+.game-btn{background:var(--accent);color:#fff;border:none;border-radius:4px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.game-btn:hover{background:var(--accent-h);}
+.game-ctrl{font-size:12px;color:var(--muted);line-height:1.9;background:var(--bg3);border-radius:4px;padding:10px 14px;}
+.game-ctrl kbd{background:#3c3c3c;padding:2px 6px;border-radius:3px;font-family:monospace;color:#fff;font-size:11px;}
 </style>
 </head>
 <body>
@@ -211,15 +222,19 @@ svg.weld-scheme{width:100%;max-width:320px;height:120px;background:var(--bg3);bo
 <section class="tab" data-tab="fastener">
   <div class="two-col">
     <div>
-      <div class="info">Расчёт массы метизов. Материал — сталь (влияние глобального материала отключено). Покрытие «Оцинкованный» даёт +2 % к массе.</div>
+      <div class="info">Расширенный справочник метизов. Точные массы болтов ГОСТ 7798. Покрытие «Оцинкованный» даёт +2 % к массе.</div>
       <div class="card"><h2>Строки расчёта</h2>
-        <table class="fastener" id="fastenerTable">
-          <thead><tr>
-            <th>№</th><th>Тип</th><th>Стандарт</th><th>Размер 1</th><th>Размер 2</th><th>Размер 3</th>
-            <th>Покрытие</th><th>Класс</th><th>Кол-во</th><th>Вес 1 шт</th><th>Вес</th><th></th>
-          </tr></thead>
-          <tbody></tbody>
-        </table>
+        <div style="overflow-x:auto">
+          <table class="fastener" id="fastenerTable">
+            <thead><tr>
+              <th style="width:35px">№</th><th style="width:80px">Тип</th><th style="width:170px">Стандарт</th>
+              <th style="width:80px">Размер 1</th><th style="width:75px">Размер 2</th><th style="width:70px">Размер 3</th>
+              <th style="width:100px">Покрытие</th><th style="width:70px">Класс</th><th style="width:70px">Кол-во</th>
+              <th style="width:85px">Вес 1 шт</th><th style="width:85px">Вес</th><th style="width:35px"></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
         <div class="btn-group" style="justify-content:flex-start;margin-top:12px">
           <button class="btn" onclick="fastenerAddRow()">➕ Добавить строку</button>
           <button class="btn sec" onclick="calcFastener()">🧮 Рассчитать</button>
@@ -258,11 +273,11 @@ svg.weld-scheme{width:100%;max-width:320px;height:120px;background:var(--bg3);bo
   </div>
 </section>
 
-<!-- РАСЧЁТ АКЗ ИЗ EXCEL -->
+<!-- РАСЧЁТ АКЗ -->
 <section class="tab" data-tab="anticorr">
   <div class="two-col">
     <div>
-      <div class="info">Загрузка файла Excel с нормами АКЗ. Формат: столбцы A=№ведомости, B=назначение, C=материал, D=марка, H=норма на 1 слой, I=слоёв, K=итог.</div>
+      <div class="info">Загрузка файла Excel с нормами АКЗ. Формат: A=№ведомости, B=назначение, C=материал, D=марка, H=норма на 1 слой, I=слоёв, K=итог.</div>
       <div class="card">
         <h2>Загрузка файла</h2>
         <input type="file" id="excelFile" accept=".xlsx,.xls" style="color:#ccc">
@@ -330,6 +345,45 @@ svg.weld-scheme{width:100%;max-width:320px;height:120px;background:var(--bg3);bo
   </div>
 </section>
 
+<!-- ТЕТРИС -->
+<section class="tab" data-tab="tetris">
+  <div class="game-wrap">
+    <canvas id="tetrisCanvas" class="game-canvas" width="300" height="600"></canvas>
+    <div class="game-side">
+      <div class="stat"><span>Счёт:</span><strong id="tetrisScore">0</strong></div>
+      <div class="stat"><span>Линии:</span><strong id="tetrisLines">0</strong></div>
+      <div class="stat"><span>Уровень:</span><strong id="tetrisLevel">1</strong></div>
+      <button class="game-btn" onclick="tetrisReset()">🔄 Новая игра</button>
+      <div class="game-ctrl">
+        <strong style="color:#569cd6">Управление:</strong><br>
+        <kbd>←</kbd> <kbd>→</kbd> — движение<br>
+        <kbd>↑</kbd> — поворот<br>
+        <kbd>↓</kbd> — ускорить<br>
+        <kbd>Пробел</kbd> — сброс<br>
+        <kbd>P</kbd> — пауза · <kbd>R</kbd> — заново
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2048 -->
+<section class="tab" data-tab="game2048">
+  <div class="game-wrap">
+    <canvas id="g2048Canvas" class="game-canvas" width="480" height="560"></canvas>
+    <div class="game-side">
+      <div class="stat"><span>Счёт:</span><strong id="g2048Score">0</strong></div>
+      <div class="stat"><span>Рекорд:</span><strong id="g2048Best">0</strong></div>
+      <button class="game-btn" onclick="g2048Reset()">🔄 Новая игра</button>
+      <div class="game-ctrl">
+        <strong style="color:#569cd6">Управление:</strong><br>
+        <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd><br>
+        или <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><br>
+        Свайпы на телефоне
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- КАЛЬКУЛЯТОР -->
 <section class="tab" data-tab="calc">
   <div class="two-col">
@@ -371,10 +425,11 @@ svg.weld-scheme{width:100%;max-width:320px;height:120px;background:var(--bg3);bo
         <li>Покраска — площадь + расход краски</li>
         <li>Пескоструй — расход абразива по ISO 8501-1</li>
         <li>Нормы АКЗ — библиотека ЛКМ</li>
-        <li>Крепёж — болты, гайки, саморезы и т.д.</li>
+        <li>Крепёж — болты, гайки, шайбы и т.д. (расширенный справочник)</li>
         <li>Изоляция — объём изоляции труб</li>
         <li>Расчёт АКЗ — загрузка норм из Excel</li>
         <li>Сварка — расход электродов/газа</li>
+        <li>🎮 Тетрис и 🔢 2048 — для перерывов</li>
         <li>Калькулятор — обычный + история</li>
       </ul>
       <p style="margin-top:12px"><strong>Особенности:</strong> приём точки и запятой, копирование результатов по клику, история в localStorage, работа offline.</p>
@@ -390,13 +445,13 @@ svg.weld-scheme{width:100%;max-width:320px;height:120px;background:var(--bg3);bo
 <script>
 // ============================== ДАННЫЕ ==============================
 
-const MATERIALS = {
+const MATERIALS={
   "Сталь (углеродистая)":7850,"Нержавеющая сталь":7930,"Алюминий":2700,
   "Медь":8900,"Бронза":8800,"Чугун":7200,"Латунь":8500
 };
-let currentDensity = 7850;
+let currentDensity=7850;
 
-const SORTAMENT = {
+const SORTAMENT={
   "Труба ГОСТ 8732-78 (горячедеформ.)":{type:"pipe",data:[
     [20,2.5,1.08],[20,3.0,1.26],[20,3.5,1.42],[25,2.5,1.39],[25,3.0,1.63],[25,3.5,1.86],[25,4.0,2.07],
     [32,3.0,2.15],[32,3.5,2.46],[32,4.0,2.76],[38,3.0,2.59],[38,4.0,3.35],
@@ -437,7 +492,7 @@ const SORTAMENT = {
   ]}
 };
 
-const PROFILES = {
+const PROFILES={
   "Профиль направляющий ПН (UD)":{sizes:[["ПН-50×40×0.5",50,40,0.5,0.51],["ПН-50×40×0.6",50,40,0.6,0.61],["ПН-75×40×0.5",75,40,0.5,0.62],["ПН-75×40×0.6",75,40,0.6,0.74],["ПН-100×40×0.5",100,40,0.5,0.72],["ПН-100×40×0.6",100,40,0.6,0.86]]},
   "Профиль стоечный ПС (CD)":{sizes:[["ПС-50×50×0.5",50,50,0.5,0.58],["ПС-50×50×0.6",50,50,0.6,0.70],["ПС-75×50×0.5",75,50,0.5,0.68],["ПС-75×50×0.6",75,50,0.6,0.82],["ПС-100×50×0.5",100,50,0.5,0.78],["ПС-100×50×0.6",100,50,0.6,0.94]]},
   "Профиль потолочный ПП 60×27":{sizes:[["ПП-60×27×0.5",60,27,0.5,0.38],["ПП-60×27×0.6",60,27,0.6,0.46]]},
@@ -448,18 +503,18 @@ const PROFILES = {
   "Пластина перфорированная (лента)":{sizes:[["12×0.5",12,0,0.5,0.033],["20×0.5",20,0,0.5,0.055],["20×0.7",20,0,0.7,0.077],["30×0.7",30,0,0.7,0.115],["40×0.7",40,0,0.7,0.154]]}
 };
 
-const SB_DEGREES = {
+const SB_DEGREES={
   "Sa 1 (лёгкая)":{min:5,max:15,time:0.075,desc:"Лёгкая: рыхлая ржавчина, окалина, старая краска"},
   "Sa 2 (тщательная)":{min:15,max:30,time:0.125,desc:"Тщательная: окалина, ржавчина, остатки покрытий"},
   "Sa 2½ (очень тщательная)":{min:30,max:60,time:0.200,desc:"До металлического блеска, под АКЗ"},
   "Sa 3 (белая)":{min:60,max:100,time:0.325,desc:"100 % удаление загрязнений, максимальная адгезия"}
 };
-const SB_ABRASIVES = {
+const SB_ABRASIVES={
   "Кварцевый песок":{kc:1.00,kt:1.00},"Купершлак":{kc:0.85,kt:0.90},
   "Электрокорунд":{kc:0.70,kt:0.85},"Стальная дробь":{kc:0.30,kt:0.80}
 };
 
-const AKZ_STANDARDS = [
+const AKZ_STANDARDS=[
   {name:"Эпоксидная грунтовка",cat:"Грунт",cmin:0.180,cmax:0.250,tsp:"60–80 мкм",layers:2,interval:"8–24 ч"},
   {name:"Полиуретановая эмаль",cat:"Эмаль",cmin:0.120,cmax:0.160,tsp:"30–50 мкм",layers:2,interval:"12–36 ч"},
   {name:"Цинконаполненный грунт",cat:"Грунт",cmin:0.200,cmax:0.300,tsp:"70–100 мкм",layers:1,interval:"12–24 ч"},
@@ -472,33 +527,85 @@ const AKZ_STANDARDS = [
   {name:"КО-811 (кремнийорганическая)",cat:"Эмаль",cmin:0.120,cmax:0.170,tsp:"25–40 мкм",layers:2,interval:"2–6 ч"}
 ];
 
-const STANDARDS_DATA = {
-  "Болт":{
-    "ГОСТ 7798":{diameters:[6,8,10,12,16,20,24,30],lengths:[10,12,16,20,25,30,40,50,60,80,100,120],coatings:["Без покрытия","Оцинкованный"],strength:["5.8","8.8","10.9"]},
-    "DIN 931":{diameters:[6,8,10,12,16,20,24,30],lengths:[20,30,40,50,60,70,80,100,120,150],coatings:["Без покрытия","Оцинкованный"],strength:["5.8","8.8","10.9"]}
-  },
-  "Винт":{
-    "DIN 912":{diameters:[3,4,5,6,8,10,12,16,20],lengths:[6,8,10,12,16,20,25,30,40,50,60,80,100],coatings:["Без покрытия","Оцинкованный"],strength:["8.8","10.9","12.9"]},
-    "DIN 7991":{diameters:[3,4,5,6,8,10,12,16,20],lengths:[6,8,10,12,16,20,25,30,40,50,60,80,100],coatings:["Без покрытия","Оцинкованный"],strength:["8.8","10.9"]}
-  },
-  "Гайка":{
-    "ГОСТ 5927":{diameters:[5,6,8,10,12,14,16,18,20,22,24,27,30,36],lengths:[],coatings:["Без покрытия","Оцинкованный"],strength:["5","6","8","10"]},
-    "DIN 934":{diameters:[6,8,10,12,16,20,24,30],lengths:[],coatings:["Без покрытия","Оцинкованный"],strength:["6","8","10"]}
-  },
-  "Гвоздь":{"ГОСТ 4028":{diameters:[2.5,3.0,3.5,4.0,4.5,5.0,6.0],lengths:[25,30,40,50,60,80,100,120],coatings:["Без покрытия","Оцинкованный"],strength:["—"]}},
-  "Саморез":{
-    "По дереву":{diameters:[3.5,3.9,4.2,4.8,6.3],lengths:[16,25,35,45,55,70,90],coatings:["Черный фосфатированный"],strength:["—"]},
-    "По металлу":{diameters:[3.5,3.9,4.2,4.8,5.5,6.3],lengths:[13,16,25,32,45,64,89,102],coatings:["Без покрытия","Оцинкованный"],strength:["—"]}
-  },
-  "Заклепка":{"Вытяжная":{diameters:[3.2,4.0,4.8,6.4],lengths:[6,8,10,12,16,20,25,30],coatings:["—","Оцинкованный"],strength:["—"]}},
-  "Дюбель":{"Распорный":{diameters:[5,6,8,10,12,14],lengths:[25,30,40,50,60,80,100],coatings:["—"],strength:["—"]}}
+// Точные массы болтов ГОСТ 7798-70 (г) по [диаметр, длина]
+const BOLT_MASS_GOST7798={
+  "6,10":4.712,"6,12":4.924,"6,16":5.345,"6,20":5.767,"6,25":6.293,"6,30":6.820,
+  "6,35":7.346,"6,40":7.872,"6,45":8.398,"6,50":8.925,"6,55":9.451,"6,60":9.977,
+  "8,12":8.282,"8,16":9.065,"8,20":9.847,"8,25":11.012,"8,30":12.177,
+  "8,35":13.342,"8,40":14.507,"8,45":15.672,"8,50":16.837,"8,55":18.002,
+  "8,60":19.167,"8,65":20.332,"8,70":21.497,"8,80":23.827,
+  "10,16":13.280,"10,20":14.570,"10,25":16.150,"10,30":17.730,"10,35":19.310,
+  "10,40":20.890,"10,45":22.470,"10,50":24.050,"10,55":25.630,"10,60":27.210,
+  "10,65":28.790,"10,70":30.370,"10,80":33.530,"10,90":36.690,"10,100":39.850,
+  "12,20":19.270,"12,25":21.230,"12,30":23.190,"12,35":25.150,"12,40":27.110,
+  "12,45":29.070,"12,50":31.030,"12,55":32.990,"12,60":34.950,"12,65":36.910,
+  "12,70":38.870,"12,80":42.790,"12,90":46.710,"12,100":50.630,"12,110":54.550,
+  "12,120":58.470,
+  "16,25":34.330,"16,30":37.070,"16,35":39.810,"16,40":42.550,"16,45":45.290,
+  "16,50":48.030,"16,55":50.770,"16,60":53.510,"16,65":56.250,"16,70":58.990,
+  "16,80":64.470,"16,90":69.950,"16,100":75.430,"16,110":80.910,"16,120":86.390,
+  "20,30":54.450,"20,35":58.170,"20,40":61.890,"20,45":65.610,"20,50":69.330,
+  "20,55":73.050,"20,60":76.770,"20,65":80.490,"20,70":84.210,"20,80":91.650,
+  "20,90":99.090,"20,100":106.530,"20,110":113.970,"20,120":121.410,
+  "24,35":78.660,"24,40":83.220,"24,45":87.780,"24,50":92.340,"24,55":96.900,
+  "24,60":101.460,"24,65":106.020,"24,70":110.580,"24,80":119.700,"24,90":128.820,
+  "24,100":137.940,"24,110":147.060,"24,120":156.180,
+  "30,45":123.200,"30,50":129.400,"30,55":135.600,"30,60":141.800,"30,65":148.000,
+  "30,70":154.200,"30,80":166.600,"30,90":179.000,"30,100":191.400,
+  "30,110":203.800,"30,120":216.200
 };
 
-const COATING_FACTOR = {"Без покрытия":1.0,"Оцинкованный":1.02,"Черный фосфатированный":1.0,"—":1.0};
-const BOLT_PARAMS = {3:{S:5.5,k:2.0,d1:2.5},4:{S:7,k:2.8,d1:3.4},5:{S:8,k:3.5,d1:4.2},6:{S:10,k:4.0,d1:5.0},8:{S:13,k:5.3,d1:6.8},10:{S:17,k:6.4,d1:8.4},12:{S:19,k:7.5,d1:10.2},16:{S:24,k:10.0,d1:13.8},20:{S:30,k:12.5,d1:17.3},24:{S:36,k:15.0,d1:20.7},30:{S:46,k:18.7,d1:26.2}};
-const NUT_MASS = {5:1.44,6:2.20,8:5.10,10:8.40,12:14.0,14:20.0,16:29.0,18:38.0,20:51.0,22:64.0,24:79.0,27:110.0,30:140.0,36:230.0};
+const STANDARDS_DATA={
+  "Болт":{
+    "ГОСТ 7798-70 (полная резьба)":{diameters:[6,8,10,12,16,20,24,30],lengths:[10,12,16,20,25,30,35,40,45,50,55,60,65,70,80,90,100,110,120],coatings:["Без покрытия","Оцинкованный"],strength:["5.8","8.8","10.9"]},
+    "DIN 931 (неполная резьба)":{diameters:[6,8,10,12,16,20,24,30],lengths:[20,25,30,35,40,45,50,55,60,65,70,80,90,100,110,120,130,140,150],coatings:["Без покрытия","Оцинкованный"],strength:["5.8","8.8","10.9"]},
+    "DIN 933 (полная резьба)":{diameters:[6,8,10,12,16,20,24,30],lengths:[10,12,16,20,25,30,35,40,45,50,55,60,65,70,80,90,100],coatings:["Без покрытия","Оцинкованный"],strength:["5.8","8.8","10.9"]},
+    "ГОСТ 7795 (с подголовником)":{diameters:[6,8,10,12,16,20],lengths:[20,25,30,35,40,45,50,55,60,70,80,90,100],coatings:["Без покрытия","Оцинкованный"],strength:["5.8","8.8"]},
+    "ГОСТ 7796 (уменьшенная головка)":{diameters:[6,8,10,12,16,20],lengths:[16,20,25,30,35,40,45,50,55,60,70,80],coatings:["Без покрытия","Оцинкованный"],strength:["5.8","8.8"]},
+    "DIN 607 (с усом)":{diameters:[6,8,10,12,16,20],lengths:[20,25,30,35,40,45,50,55,60,70,80,90,100],coatings:["Без покрытия","Оцинкованный"],strength:["4.6","5.8"]},
+    "DIN 603 (мебельный)":{diameters:[6,8,10,12,16,20],lengths:[20,25,30,35,40,45,50,55,60,70,80,90,100,120,140,160],coatings:["Без покрытия","Оцинкованный"],strength:["4.6","5.8"]},
+    "DIN 6921 (с фланцем)":{diameters:[6,8,10,12,16,20],lengths:[16,20,25,30,35,40,45,50,55,60,70,80,90,100],coatings:["Без покрытия","Оцинкованный"],strength:["8.8","10.9"]}
+  },
+  "Винт":{
+    "DIN 912 (цилиндрическая головка)":{diameters:[3,4,5,6,8,10,12,16,20],lengths:[6,8,10,12,16,20,25,30,35,40,45,50,55,60,70,80,90,100],coatings:["Без покрытия","Оцинкованный"],strength:["8.8","10.9","12.9"]},
+    "DIN 7991 (потайная головка)":{diameters:[3,4,5,6,8,10,12,16,20],lengths:[6,8,10,12,16,20,25,30,35,40,45,50,55,60,70,80,90,100],coatings:["Без покрытия","Оцинкованный"],strength:["8.8","10.9"]},
+    "DIN 7985 (полукруглая головка)":{diameters:[3,4,5,6,8,10],lengths:[6,8,10,12,16,20,25,30,35,40,45,50],coatings:["Без покрытия","Оцинкованный"],strength:["4.8","8.8"]}
+  },
+  "Гайка":{
+    "ГОСТ 5927-70 (шестигранная)":{diameters:[5,6,8,10,12,14,16,18,20,22,24,27,30,36],lengths:[],coatings:["Без покрытия","Оцинкованный"],strength:["5","6","8","10"]},
+    "DIN 934 (шестигранная)":{diameters:[6,8,10,12,16,20,24,30],lengths:[],coatings:["Без покрытия","Оцинкованный"],strength:["6","8","10"]},
+    "DIN 985 (с нейлоном)":{diameters:[4,5,6,8,10,12,16,20],lengths:[],coatings:["Без покрытия","Оцинкованный"],strength:["6","8"]}
+  },
+  "Гвоздь":{
+    "ГОСТ 4028-63 (строительный)":{diameters:[2.5,3.0,3.5,4.0,4.5,5.0,6.0],lengths:[25,30,40,50,60,70,80,90,100,120,150],coatings:["Без покрытия","Оцинкованный"],strength:["—"]},
+    "ГОСТ 4030-63 (трефовый)":{diameters:[3.0,3.5,4.0,5.0,6.0],lengths:[40,50,60,70,80,90,100,120],coatings:["Без покрытия"],strength:["—"]}
+  },
+  "Саморез":{
+    "По дереву (черный)":{diameters:[3.5,3.9,4.2,4.8,6.3],lengths:[16,19,25,32,35,41,45,51,55,64,70,76,89,102],coatings:["Черный фосфатированный"],strength:["—"]},
+    "По металлу (с буром)":{diameters:[3.5,3.9,4.2,4.8,5.5,6.3],lengths:[13,16,19,25,32,38,45,51,64,76,89,102,127],coatings:["Без покрытия","Оцинкованный"],strength:["—"]},
+    "Кровельный (с шайбой)":{diameters:[4.8,5.5,6.3],lengths:[35,50,70,100,120],coatings:["Оцинкованный","Цветной"],strength:["—"]}
+  },
+  "Заклепка":{
+    "Вытяжная алюминиевая":{diameters:[3.2,4.0,4.8,6.4],lengths:[6,8,10,12,16,20,25,30],coatings:["—"],strength:["—"]},
+    "Вытяжная стальная":{diameters:[3.2,4.0,4.8,6.4],lengths:[6,8,10,12,16,20,25,30],coatings:["Без покрытия","Оцинкованный"],strength:["—"]},
+    "Резьбовая (заклёпка-гайка)":{diameters:[3,4,5,6,8],lengths:[8,10,12,15,20,25],coatings:["Оцинкованный"],strength:["—"]}
+  },
+  "Дюбель":{
+    "Распорный пластиковый":{diameters:[5,6,8,10,12,14],lengths:[25,30,40,50,60,80,100,120],coatings:["—"],strength:["—"]},
+    "Анкерный клиновой":{diameters:[6,8,10,12,16,20],lengths:[40,50,60,80,100,120,150],coatings:["Оцинкованный"],strength:["—"]}
+  },
+  "Шайба":{
+    "ГОСТ 11371 (плоская)":{diameters:[6,8,10,12,16,20,24,30],lengths:[],coatings:["Без покрытия","Оцинкованный"],strength:["—"]},
+    "ГОСТ 6402 (пружинная)":{diameters:[6,8,10,12,16,20,24,30],lengths:[],coatings:["Без покрытия","Оцинкованный"],strength:["—"]},
+    "DIN 125 (плоская)":{diameters:[6,8,10,12,16,20,24,30],lengths:[],coatings:["Без покрытия","Оцинкованный"],strength:["—"]}
+  }
+};
 
-const WELD_JOINTS = {
+const COATING_FACTOR={"Без покрытия":1.0,"Оцинкованный":1.02,"Черный фосфатированный":1.0,"Цветной":1.02,"—":1.0};
+const BOLT_PARAMS={3:{S:5.5,k:2.0,d1:2.5},4:{S:7,k:2.8,d1:3.4},5:{S:8,k:3.5,d1:4.2},6:{S:10,k:4.0,d1:5.0},8:{S:13,k:5.3,d1:6.8},10:{S:17,k:6.4,d1:8.4},12:{S:19,k:7.5,d1:10.2},16:{S:24,k:10.0,d1:13.8},20:{S:30,k:12.5,d1:17.3},24:{S:36,k:15.0,d1:20.7},30:{S:46,k:18.7,d1:26.2}};
+const NUT_MASS={5:1.44,6:2.20,8:5.10,10:8.40,12:14.0,14:20.0,16:29.0,18:38.0,20:51.0,22:64.0,24:79.0,27:110.0,30:140.0,36:230.0};
+
+const WELD_JOINTS={
   pipe:[
     {code:"С2",name:"Стыковое без скоса"},{code:"С8",name:"Со скосом 1 кромки"},
     {code:"С17",name:"С V-разделкой"},{code:"У5",name:"Угловое с фланцем"},
@@ -545,6 +652,7 @@ const TABS=[
   ['sandblast','🪨 Пескоструй'],['akzlib','🎨 Нормы АКЗ'],
   ['fastener','🔩 Крепёж'],['insulation','🌡️ Изоляция'],
   ['anticorr','🧪 Расчёт АКЗ'],['welding','⚡ Сварка'],
+  ['tetris','🎮 Тетрис'],['game2048','🔢 2048'],
   ['calc','🧮 Калькулятор'],['help','📖 Справка']
 ];
 function initTabs(){
@@ -557,6 +665,9 @@ function initTabs(){
       document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
       const target=document.querySelector(`.tab[data-tab="${b.dataset.t}"]`);
       if(target)target.classList.add('active');
+      // пауза игр при уходе со вкладки
+      if(b.dataset.t!=='tetris'&&tPaused===false&&!tGameOver){tPaused=true;tetrisRender();}
+      if(b.dataset.t!=='game2048'){/* ничего */}
     };
   });
 }
@@ -585,7 +696,6 @@ const ROLLED_TYPES={
   beam:{name:"Двутавр",fields:[["h","Высота","мм","200"],["b","Ширина полки","мм","100"],["s","Стенка","мм","5.5"],["t","Полка","мм","8.5"],["L","Длина","м","6"]],
     calc:v=>(((v.h/1000)-2*(v.t/1000))*(v.s/1000)+2*(v.b/1000)*(v.t/1000))*v.L*currentDensity}
 };
-
 function initRolled(){
   const sel=document.getElementById('rolledType');
   sel.innerHTML=Object.entries(ROLLED_TYPES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
@@ -612,8 +722,7 @@ function clearRolled(){renderRolledInputs();document.getElementById('rolledResul
 function initSortament(){
   const sel=document.getElementById('sortType');
   sel.innerHTML=Object.keys(SORTAMENT).map(k=>`<option>${k}</option>`).join('');
-  sel.onchange=renderSortInputs;
-  renderSortInputs();
+  sel.onchange=renderSortInputs;renderSortInputs();
 }
 function renderSortInputs(){
   const key=document.getElementById('sortType').value;
@@ -875,18 +984,27 @@ function calcFastener(){
 function computeWeight(type,std,d,len,thick){
   try{
     const D=7850;
+    const dInt=Math.round(d),lInt=Math.round(len);
+    if(type==='Болт'&&std.includes('7798')){
+      const key=dInt+','+lInt;
+      if(BOLT_MASS_GOST7798[key])return BOLT_MASS_GOST7798[key]/1000;
+    }
     if(type==='Болт'){
-      const p=BOLT_PARAMS[Math.round(d)];
+      const p=BOLT_PARAMS[dInt];
       if(!p)return 0;
-      const stem=Math.PI*Math.pow(p.d1/1000,2)/4*(len/1000)*D;
+      const stem=Math.PI*Math.pow(p.d1/1000,2)/4*(lInt/1000)*D;
       const head=0.866*Math.pow(p.S/1000,2)*(p.k/1000)*D;
       return stem+head;
     }
     if(type==='Винт')return computeWeight('Болт',std,d,len,thick)*0.9;
     if(type==='Гайка'){
-      const di=Math.round(d);
-      if(NUT_MASS[di])return NUT_MASS[di]/1000;
-      return Math.PI*Math.pow(di/1000,2)/4*(di*0.8/1000)*D*0.8;
+      if(NUT_MASS[dInt])return NUT_MASS[dInt]/1000;
+      return Math.PI*Math.pow(dInt/1000,2)/4*(dInt*0.8/1000)*D*0.8;
+    }
+    if(type==='Шайба'){
+      const inner=dInt/1000,outer=inner*2,t=0.002;
+      if(std.includes('пружин'))return Math.PI/4*(Math.pow(outer,2)-Math.pow(inner,2))*t*D*1.5;
+      return Math.PI/4*(Math.pow(outer,2)-Math.pow(inner,2))*t*D;
     }
     if(type==='Гвоздь'){
       const dd=d/1000,L=len/1000;
@@ -895,13 +1013,19 @@ function computeWeight(type,std,d,len,thick){
       return stem+head;
     }
     if(type==='Саморез')return Math.PI*Math.pow(d/1000,2)/4*(len/1000)*D*0.85;
-    if(type==='Заклепка')return Math.PI*Math.pow(d/1000,2)/4*(len/1000)*D*0.6;
+    if(type==='Заклепка'){
+      const dd=d/1000,L=len/1000;
+      const body=Math.PI*Math.pow(dd,2)/4*L*D;
+      const head=Math.PI*Math.pow(2*dd,2)/4*(0.6*dd)*D;
+      return body+head;
+    }
     if(type==='Дюбель')return Math.PI*Math.pow(d/1000,2)/4*(len/1000)*1200;
     return 0;
   }catch(e){return 0;}
 }
 function fastenerClearAll(){
   document.querySelector('#fastenerTable tbody').innerHTML='';
+  fastenerRowId=0;
   fastenerAddRow();document.getElementById('fastenerResult').style.display='none';
 }
 
@@ -953,7 +1077,7 @@ function calcInsulation(){
     {save:true,tab:'insulation',history:`${label}\n  → Sr=${fmt(Sr,3)} м², Vi=${fmt(Vi,3)} м³`});
 }
 
-// ============================== РАСЧЁТ АКЗ ИЗ EXCEL ==============================
+// ============================== РАСЧЁТ АКЗ ==============================
 
 let anticorrData={};
 function initAnticorr(){
@@ -974,7 +1098,6 @@ function loadExcel(e){
         for(let i=1;i<rows.length;i++){
           const r=rows[i]||[];
           const vn=r[0]?String(r[0]).trim():'';
-          const purpose=r[1]?String(r[1]).trim():'';
           const mat=r[2]?String(r[2]).trim():'';
           const mark=r[3]?String(r[3]).trim():'';
           const n1=typeof r[7]==='number'?r[7]:0;
@@ -1106,10 +1229,229 @@ function calcWelding(){
     showResult('weldGas',`Расход CO₂: ${fmt(massPure*1.25,2)} кг`);
   }else if(method===2){
     const arL=length_m*120;
-    showResult('weldGas',`Расход Ar: ${ar0(arL)} л (${fmt(arL/6000,2)} баллонов)`);
+    showResult('weldGas',`Расход Ar: ${Math.round(arL)} л (${fmt(arL/6000,2)} баллонов)`);
   }
 }
-function ar0(v){return Math.round(v);}
+
+// ============================== ТЕТРИС ==============================
+
+const TETRIS_SHAPES=[
+  [[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],
+  [[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]],[[0,1,1],[1,1,0]],[[1,1,0],[0,1,1]]
+];
+const TETRIS_COLORS=['#00f0ff','#ffe600','#b400ff','#00ff50','#ff1e3c','#1e78ff','#ff8c00'];
+const TG={W:10,H:20,SIZE:30};
+
+let tGrid,tPiece,tNext,tScore,tLines,tLevel,tGameOver,tPaused,tTimer,tSpeed;
+
+function tetrisInit(){
+  const c=document.getElementById('tetrisCanvas');
+  if(!c)return;
+  tGrid=Array.from({length:TG.H},()=>Array(TG.W).fill(null));
+  tPiece=tetrisNewPiece();tNext=tetrisNewPiece();
+  tScore=0;tLines=0;tLevel=1;tGameOver=false;tPaused=false;tSpeed=500;
+  updateTetrisStats();
+  tetrisRender();
+  if(tTimer)clearInterval(tTimer);
+  tTimer=setInterval(tetrisTick,tSpeed);
+}
+function tetrisNewPiece(){
+  const i=Math.floor(Math.random()*TETRIS_SHAPES.length);
+  return {shape:TETRIS_SHAPES[i].map(r=>r.slice()),color:TETRIS_COLORS[i],x:3,y:0};
+}
+function tetrisCollide(p,dx,dy,sh){
+  const s=sh||p.shape;
+  for(let y=0;y<s.length;y++)for(let x=0;x<s[y].length;x++){
+    if(!s[y][x])continue;
+    const nx=p.x+x+dx,ny=p.y+y+dy;
+    if(nx<0||nx>=TG.W||ny>=TG.H)return true;
+    if(ny>=0&&tGrid[ny][nx])return true;
+  }return false;
+}
+function tetrisRotate(){
+  const s=tPiece.shape;
+  const r=s[0].map((_,i)=>s.map(row=>row[i]).reverse());
+  if(!tetrisCollide(tPiece,0,0,r))tPiece.shape=r;
+}
+function tetrisLock(){
+  tPiece.shape.forEach((row,y)=>row.forEach((v,x)=>{
+    if(v&&tPiece.y+y>=0)tGrid[tPiece.y+y][tPiece.x+x]=tPiece.color;
+  }));
+  let cleared=0;
+  for(let y=TG.H-1;y>=0;y--){
+    if(tGrid[y].every(v=>v)){
+      tGrid.splice(y,1);tGrid.unshift(Array(TG.W).fill(null));
+      cleared++;y++;
+    }
+  }
+  if(cleared){
+    tLines+=cleared;
+    tScore+=[0,100,300,500,800][cleared]*tLevel;
+    const newLvl=Math.floor(tLines/10)+1;
+    if(newLvl>tLevel){tLevel=newLvl;tSpeed=Math.max(100,500-(tLevel-1)*40);
+      clearInterval(tTimer);tTimer=setInterval(tetrisTick,tSpeed);}
+  }
+  tPiece=tNext;tNext=tetrisNewPiece();
+  if(tetrisCollide(tPiece,0,0)){tGameOver=true;clearInterval(tTimer);}
+  updateTetrisStats();
+}
+function tetrisTick(){
+  if(tPaused||tGameOver)return;
+  if(!tetrisCollide(tPiece,0,1))tPiece.y++;
+  else tetrisLock();
+  tetrisRender();
+}
+function updateTetrisStats(){
+  const g=id=>document.getElementById(id);
+  if(g('tetrisScore'))g('tetrisScore').textContent=tScore;
+  if(g('tetrisLines'))g('tetrisLines').textContent=tLines;
+  if(g('tetrisLevel'))g('tetrisLevel').textContent=tLevel;
+}
+function tetrisRender(){
+  const c=document.getElementById('tetrisCanvas');if(!c)return;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#0a0812';ctx.fillRect(0,0,c.width,c.height);
+  ctx.strokeStyle='#1e1632';ctx.lineWidth=1;
+  for(let x=0;x<=TG.W;x++){ctx.beginPath();ctx.moveTo(x*TG.SIZE,0);ctx.lineTo(x*TG.SIZE,TG.H*TG.SIZE);ctx.stroke();}
+  for(let y=0;y<=TG.H;y++){ctx.beginPath();ctx.moveTo(0,y*TG.SIZE);ctx.lineTo(TG.W*TG.SIZE,y*TG.SIZE);ctx.stroke();}
+  for(let y=0;y<TG.H;y++)for(let x=0;x<TG.W;x++){
+    if(tGrid[y][x])drawBlock(ctx,x*TG.SIZE,y*TG.SIZE,tGrid[y][x]);
+  }
+  if(!tGameOver&&tPiece)tPiece.shape.forEach((row,y)=>row.forEach((v,x)=>{
+    if(v&&tPiece.y+y>=0)drawBlock(ctx,(tPiece.x+x)*TG.SIZE,(tPiece.y+y)*TG.SIZE,tPiece.color);
+  }));
+  if(tGameOver||tPaused){
+    ctx.fillStyle='rgba(12,10,20,0.85)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle=tGameOver?'#ff2850':'#00f0ff';
+    ctx.font='bold 22px Segoe UI';ctx.textAlign='center';
+    ctx.fillText(tGameOver?'ИГРА ОКОНЧЕНА':'ПАУЗА',c.width/2,c.height/2);
+    ctx.fillStyle='#8b949e';ctx.font='13px Segoe UI';
+    ctx.fillText(tGameOver?'Нажмите R':'Нажмите P',c.width/2,c.height/2+30);
+  }
+}
+function drawBlock(ctx,x,y,color){
+  ctx.fillStyle=color;ctx.fillRect(x+1,y+1,TG.SIZE-2,TG.SIZE-2);
+  ctx.fillStyle='#0f0c19';ctx.fillRect(x+5,y+5,TG.SIZE-10,TG.SIZE-10);
+  ctx.fillStyle=color;ctx.fillRect(x+9,y+9,TG.SIZE-18,TG.SIZE-18);
+}
+function tetrisReset(){tetrisInit();}
+
+// ============================== 2048 ==============================
+
+const G_SIZE=4;
+const TILE=100,GAP=12,ORIGIN_X=30,ORIGIN_Y=100;
+const TILE_COLORS={0:'#1e192d',2:'#3c3250',4:'#504169',8:'#783ca0',16:'#b432c8',
+  32:'#e628aa',64:'#ff3c64',128:'#ff7828',256:'#ffb41e',512:'#ffe632',
+  1024:'#64ff96',2048:'#00f0ff'};
+
+let g2048Grid,g2048Score,g2048Best,g2048Over,g2048Won;
+
+function g2048Init(){
+  const c=document.getElementById('g2048Canvas');if(!c)return;
+  g2048Grid=Array.from({length:G_SIZE},()=>Array(G_SIZE).fill(0));
+  g2048Score=0;g2048Over=false;g2048Won=false;
+  g2048Best=parseInt(localStorage.getItem('g2048_best')||'0');
+  g2048Spawn();g2048Spawn();
+  g2048Render();update2048Stats();
+}
+function g2048Spawn(){
+  const empty=[];
+  for(let y=0;y<G_SIZE;y++)for(let x=0;x<G_SIZE;x++)if(!g2048Grid[y][x])empty.push([y,x]);
+  if(!empty.length)return;
+  const [y,x]=empty[Math.floor(Math.random()*empty.length)];
+  g2048Grid[y][x]=Math.random()<0.9?2:4;
+}
+function g2048Move(dir){
+  if(g2048Over)return;
+  let moved=false;
+  const newGrid=g2048Grid.map(r=>r.slice());
+  const merge=line=>{
+    const arr=line.filter(v=>v);
+    for(let i=0;i<arr.length-1;i++){
+      if(arr[i]===arr[i+1]){arr[i]*=2;g2048Score+=arr[i];arr.splice(i+1,1);}
+    }
+    while(arr.length<G_SIZE)arr.push(0);
+    return arr;
+  };
+  if(dir==='left'){
+    for(let y=0;y<G_SIZE;y++){
+      const merged=merge(newGrid[y]);
+      if(merged.some((v,i)=>v!==newGrid[y][i]))moved=true;
+      newGrid[y]=merged;
+    }
+  }else if(dir==='right'){
+    for(let y=0;y<G_SIZE;y++){
+      const merged=merge(newGrid[y].slice().reverse()).reverse();
+      if(merged.some((v,i)=>v!==newGrid[y][i]))moved=true;
+      newGrid[y]=merged;
+    }
+  }else if(dir==='up'){
+    for(let x=0;x<G_SIZE;x++){
+      const col=newGrid.map(r=>r[x]);
+      const merged=merge(col);
+      if(merged.some((v,i)=>v!==col[i]))moved=true;
+      for(let y=0;y<G_SIZE;y++)newGrid[y][x]=merged[y];
+    }
+  }else{
+    for(let x=0;x<G_SIZE;x++){
+      const col=newGrid.map(r=>r[x]);
+      const merged=merge(col.slice().reverse()).reverse();
+      if(merged.some((v,i)=>v!==col[i]))moved=true;
+      for(let y=0;y<G_SIZE;y++)newGrid[y][x]=merged[y];
+    }
+  }
+  if(!moved)return;
+  g2048Grid=newGrid;
+  g2048Spawn();
+  if(g2048Score>g2048Best){g2048Best=g2048Score;localStorage.setItem('g2048_best',g2048Best);}
+  if(!g2048CanMove())g2048Over=true;
+  if(g2048Grid.flat().some(v=>v>=2048))g2048Won=true;
+  g2048Render();update2048Stats();
+}
+function g2048CanMove(){
+  for(let y=0;y<G_SIZE;y++)for(let x=0;x<G_SIZE;x++){
+    if(!g2048Grid[y][x])return true;
+    if(x<G_SIZE-1&&g2048Grid[y][x]===g2048Grid[y][x+1])return true;
+    if(y<G_SIZE-1&&g2048Grid[y][x]===g2048Grid[y+1][x])return true;
+  }return false;
+}
+function update2048Stats(){
+  const s=document.getElementById('g2048Score'),b=document.getElementById('g2048Best');
+  if(s)s.textContent=g2048Score;if(b)b.textContent=g2048Best;
+}
+function g2048Render(){
+  const c=document.getElementById('g2048Canvas');if(!c)return;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#0a0812';ctx.fillRect(0,0,c.width,c.height);
+  ctx.fillStyle='#00f0ff';ctx.font='bold 22px Segoe UI';ctx.textAlign='left';
+  ctx.fillText('2048',ORIGIN_X,45);
+  ctx.fillStyle='#ff1e8c';ctx.fillRect(ORIGIN_X,55,4*(TILE+GAP)-GAP,3);
+  ctx.fillStyle='#f5f5ff';ctx.font='bold 16px Segoe UI';
+  ctx.fillText('СЧЁТ: '+g2048Score,ORIGIN_X,85);
+  ctx.fillStyle='#8b949e';
+  ctx.fillText('РЕКОРД: '+g2048Best,ORIGIN_X+200,85);
+  for(let y=0;y<G_SIZE;y++)for(let x=0;x<G_SIZE;x++){
+    const px=ORIGIN_X+x*(TILE+GAP),py=ORIGIN_Y+y*(TILE+GAP);
+    ctx.fillStyle='#191428';ctx.fillRect(px,py,TILE,TILE);
+    const v=g2048Grid[y][x];
+    if(v){
+      ctx.fillStyle=TILE_COLORS[v]||'#00f0ff';
+      ctx.fillRect(px+2,py+2,TILE-4,TILE-4);
+      ctx.fillStyle=v>=128?'#0f0c19':'#f5f5ff';
+      ctx.font='bold '+(v>=128?22:32)+'px Segoe UI';ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(v,px+TILE/2,py+TILE/2);
+    }
+  }
+  if(g2048Over){
+    ctx.fillStyle='rgba(12,10,20,0.85)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#ff2850';ctx.font='bold 26px Segoe UI';ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    ctx.fillText('ИГРА ОКОНЧЕНА',c.width/2,c.height/2);
+    ctx.fillStyle='#8b949e';ctx.font='14px Segoe UI';
+    ctx.fillText('Нажмите R',c.width/2,c.height/2+30);
+  }
+}
+function g2048Reset(){g2048Init();}
 
 // ============================== КАЛЬКУЛЯТОР ==============================
 
@@ -1131,6 +1473,57 @@ function calcInput(ch){
   calcExpr+=ch;disp.textContent=calcExpr;
 }
 
+// ============================== КЛАВИАТУРА (ИГРЫ) ==============================
+
+document.addEventListener('keydown',e=>{
+  const tabT=document.querySelector('.tab[data-tab="tetris"]');
+  const tabG=document.querySelector('.tab[data-tab="game2048"]');
+  if(tabT&&tabT.classList.contains('active')){
+    if(e.key==='r'||e.key==='R'){tetrisReset();return;}
+    if(e.key==='p'||e.key==='P'){tPaused=!tPaused;tetrisRender();return;}
+    if(tGameOver||tPaused)return;
+    if(e.key==='ArrowLeft'&&!tetrisCollide(tPiece,-1,0))tPiece.x--;
+    else if(e.key==='ArrowRight'&&!tetrisCollide(tPiece,1,0))tPiece.x++;
+    else if(e.key==='ArrowDown'&&!tetrisCollide(tPiece,0,1)){tPiece.y++;tScore++;updateTetrisStats();}
+    else if(e.key==='ArrowUp')tetrisRotate();
+    else if(e.key===' '){
+      while(!tetrisCollide(tPiece,0,1)){tPiece.y++;tScore+=2;}
+      tetrisLock();updateTetrisStats();
+    }
+    else return;
+    e.preventDefault();
+    tetrisRender();
+    return;
+  }
+  if(tabG&&tabG.classList.contains('active')){
+    const k=e.key;
+    if(k==='r'||k==='R'){g2048Reset();return;}
+    if(k==='ArrowLeft'||k==='a'||k==='A')g2048Move('left');
+    else if(k==='ArrowRight'||k==='d'||k==='D')g2048Move('right');
+    else if(k==='ArrowUp'||k==='w'||k==='W')g2048Move('up');
+    else if(k==='ArrowDown'||k==='s'||k==='S')g2048Move('down');
+    else return;
+    e.preventDefault();
+  }
+});
+
+// Свайпы для 2048
+(function(){
+  let sx=null,sy=null;
+  document.addEventListener('touchstart',e=>{
+    const t=e.target.closest('#g2048Canvas');
+    if(!t)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;
+  });
+  document.addEventListener('touchend',e=>{
+    if(sx==null)return;
+    const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>Math.abs(dy)){
+      if(Math.abs(dx)>30)g2048Move(dx>0?'right':'left');
+    }else if(Math.abs(dy)>30)g2048Move(dy>0?'down':'up');
+    sx=null;sy=null;
+  });
+})();
+
 // ============================== СТАРТ ==============================
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -1138,6 +1531,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   initPainting();initSandblast();initAkzLib();initFastener();
   initInsulation();initAnticorr();initWelding();
   ['rolled','sortament','profiles','painting','sandblast','akzlib','fastener','insulation','anticorr','welding','calc'].forEach(renderHistory);
+  tetrisInit();
+  g2048Init();
 });
 </script>
 </body>
